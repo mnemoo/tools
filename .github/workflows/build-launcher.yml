@@ -1,0 +1,150 @@
+name: Build Launcher
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'launcher/**'
+      - '.github/workflows/build-launcher.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'launcher/**'
+  workflow_dispatch:
+  release:
+    types: [created]
+
+env:
+  GO_VERSION: '1.22'
+  APP_NAME: mtools-launcher
+
+jobs:
+  # Native builds for maximum compatibility
+  build-native:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            goos: darwin
+            goarch: arm64
+            artifact: mtools-launcher-darwin-arm64
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            artifact: mtools-launcher-linux-amd64
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+            artifact: mtools-launcher-windows-amd64.exe
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: launcher/go.sum
+
+      # Linux dependencies for Fyne
+      - name: Install Linux dependencies
+        if: matrix.goos == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgl1-mesa-dev \
+            xorg-dev \
+            libxcursor-dev \
+            libxrandr-dev \
+            libxinerama-dev \
+            libxi-dev \
+            libxxf86vm-dev
+
+      - name: Build
+        working-directory: launcher
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 1
+        run: |
+          go mod download
+          go build -ldflags="-s -w" -o ${{ matrix.artifact }} .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: launcher/${{ matrix.artifact }}
+          if-no-files-found: error
+
+  # Cross-compilation using fyne-cross for ARM builds
+  build-cross:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: linux
+            goarch: arm64
+            artifact: mtools-launcher-linux-arm64
+          - goos: windows
+            goarch: arm64
+            artifact: mtools-launcher-windows-arm64.exe
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: launcher/go.sum
+
+      - name: Install fyne-cross
+        run: go install github.com/fyne-io/fyne-cross@latest
+
+      - name: Build with fyne-cross
+        working-directory: launcher
+        run: |
+          fyne-cross ${{ matrix.goos }} -arch ${{ matrix.goarch }} -output ${{ env.APP_NAME }}
+
+      - name: Prepare artifact
+        run: |
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            cp launcher/fyne-cross/bin/${{ matrix.goos }}-${{ matrix.goarch }}/${{ env.APP_NAME }}.exe launcher/${{ matrix.artifact }}
+          else
+            cp launcher/fyne-cross/bin/${{ matrix.goos }}-${{ matrix.goarch }}/${{ env.APP_NAME }} launcher/${{ matrix.artifact }}
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: launcher/${{ matrix.artifact }}
+          if-no-files-found: error
+
+  # Create release with all binaries
+  release:
+    needs: [build-native, build-cross]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: artifacts/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

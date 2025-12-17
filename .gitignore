@@ -1,0 +1,8 @@
+backend/go.sum
+.DS_Store
+backend/lutexplorer
+backend/bin
+backend/testdata
+backend/lutexplorer.crt
+backend/lutexplorer.key
+launcher/mtools-launcher
