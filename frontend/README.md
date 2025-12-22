@@ -1,38 +1,49 @@
-# sv
+# Frontend
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+SvelteKit web application for LUT visualization.
 
-## Creating a project
+## Prerequisites
 
-If you're seeing this, you've probably already done this step. Congrats!
+- Node.js 22+
+- pnpm (recommended) or npm
 
-```sh
-# create a new project in the current directory
-npx sv create
+## Installation
 
-# create a new project in my-app
-npx sv create my-app
+```bash
+cd frontend
+pnpm install
 ```
 
-## Developing
+## Development
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+```bash
+pnpm dev --port 7750
 ```
 
-## Building
+## Scripts
 
-To create a production version of your app:
+| Command | Description |
+|---------|-------------|
+| `pnpm dev` | Start development server |
+| `pnpm build` | Build for production |
+| `pnpm preview` | Preview production build |
 
-```sh
-npm run build
+## Tech Stack
+
+- [SvelteKit](https://kit.svelte.dev/) - Framework
+- [Svelte 5](https://svelte.dev/) - UI
+- [Tailwind CSS 4](https://tailwindcss.com/) - Styling
+- [Vite](https://vitejs.dev/) - Build tool
+- [TypeScript](https://www.typescriptlang.org/) - Type safety
+
+## Building for Production
+
+```bash
+pnpm build
 ```
 
-You can preview the production build with `npm run preview`.
+Output will be in the `build/` directory.
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+## Configuration
+
+The frontend expects the backend to be running at `http://localhost:7754`.
