@@ -10,6 +10,8 @@
 
 	let { distribution, buckets, mode, onLook }: Props = $props();
 
+	const ITEMS_PER_PAGE = 100;
+
 	let sessions = $state<LGSSessionSummary[]>([]);
 	let selectedSession = $state<string>('');
 	let forceLoading = $state<number | null>(null);
@@ -17,6 +19,9 @@
 
 	// Track which bucket is expanded (only one at a time)
 	let expandedBucket = $state<string | null>(null);
+
+	// Track visible items count per bucket for lazy loading
+	let visibleCounts = $state<Record<string, number>>({});
 
 	// Group distribution items by bucket and sort buckets by range_end descending (biggest first)
 	let groupedByBucket = $derived(() => {
@@ -48,6 +53,16 @@
 		return groups;
 	});
 
+	// Initialize visible counts when groups change
+	$effect(() => {
+		const groups = groupedByBucket();
+		for (const { key } of groups) {
+			if (!(key in visibleCounts)) {
+				visibleCounts[key] = ITEMS_PER_PAGE;
+			}
+		}
+	});
+
 	// Set first bucket as expanded by default (wincap)
 	$effect(() => {
 		const groups = groupedByBucket();
@@ -58,7 +73,42 @@
 
 	function toggleBucket(key: string) {
 		// Accordion behavior: close current if clicking same, otherwise switch
-		expandedBucket = expandedBucket === key ? null : key;
+		if (expandedBucket === key) {
+			expandedBucket = null;
+		} else {
+			expandedBucket = key;
+			// Reset visible count when opening a new bucket
+			visibleCounts[key] = ITEMS_PER_PAGE;
+		}
+	}
+
+	// Load more items for a bucket
+	function loadMore(key: string, totalItems: number) {
+		const current = visibleCounts[key] ?? ITEMS_PER_PAGE;
+		visibleCounts[key] = Math.min(current + ITEMS_PER_PAGE, totalItems);
+	}
+
+	// Intersection observer for lazy loading
+	function observeSentinel(node: HTMLElement, params: { key: string; totalItems: number }) {
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries[0].isIntersecting) {
+					loadMore(params.key, params.totalItems);
+				}
+			},
+			{ rootMargin: '100px' }
+		);
+
+		observer.observe(node);
+
+		return {
+			destroy() {
+				observer.disconnect();
+			},
+			update(newParams: { key: string; totalItems: number }) {
+				params = newParams;
+			}
+		};
 	}
 
 	// Load sessions for force outcome
@@ -181,6 +231,9 @@
 		<div class="space-y-2">
 			{#each groupedByBucket() as { bucket, items, key }}
 				{@const isExpanded = expandedBucket === key}
+				{@const visibleCount = visibleCounts[key] ?? ITEMS_PER_PAGE}
+				{@const visibleItems = items.slice(0, visibleCount)}
+				{@const hasMore = visibleCount < items.length}
 				<div class="rounded-xl border border-slate-700/50 overflow-hidden bg-slate-800/30">
 					<!-- Accordion Header -->
 					<button
@@ -238,7 +291,7 @@
 										</tr>
 									</thead>
 									<tbody class="text-sm">
-										{#each items as item, i}
+										{#each visibleItems as item, i}
 											<tr class="border-t border-slate-700/30 hover:bg-slate-700/30 transition-colors {i % 2 === 0 ? 'bg-slate-800/20' : ''}">
 												<td class="px-4 py-2">
 													<span class="font-medium text-white font-mono">{formatMultiplier(item.payout)}</span>
@@ -291,6 +344,16 @@
 										{/each}
 									</tbody>
 								</table>
+
+								<!-- Sentinel for lazy loading -->
+								{#if hasMore}
+									<div
+										use:observeSentinel={{ key, totalItems: items.length }}
+										class="py-3 text-center text-xs font-mono text-[var(--color-mist)]"
+									>
+										Loading more... ({visibleCount} / {items.length})
+									</div>
+								{/if}
 							</div>
 						</div>
 					{/if}
