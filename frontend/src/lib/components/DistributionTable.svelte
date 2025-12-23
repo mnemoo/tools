@@ -19,14 +19,13 @@
 	// Track which bucket is expanded (only one at a time)
 	let expandedBucket = $state<string | null>(null);
 
-	// Track bucket data loaded from API
-	let bucketData = $state<Record<string, {
+	let currentData = $state<{
 		items: DistributionItem[];
 		total: number;
 		loading: boolean;
 		hasMore: boolean;
 		error: string | null;
-	}>>({});
+	} | null>(null);
 
 	// Sort buckets by range_end descending (biggest first)
 	let sortedBuckets = $derived(() => {
@@ -48,26 +47,27 @@
 		}
 	});
 
-	// Load bucket data from API
-	async function loadBucketData(bucket: PayoutBucket, offset: number) {
-		const key = getBucketKey(bucket);
+	// Reset when mode changes
+	$effect(() => {
+		// Track mode to reset state when it changes
+		const _ = mode;
+		expandedBucket = null;
+		currentData = null;
+	});
 
-		// Initialize if needed
-		if (!bucketData[key]) {
-			bucketData[key] = {
+	// Load bucket data from API - always fresh, no frontend cache
+	async function loadBucketData(bucket: PayoutBucket, offset: number) {
+		if (offset === 0) {
+			// Fresh load
+			currentData = {
 				items: [],
 				total: 0,
 				loading: true,
 				hasMore: false,
 				error: null
 			};
-		} else if (offset === 0) {
-			// Reset for fresh load
-			bucketData[key].items = [];
-			bucketData[key].loading = true;
-			bucketData[key].error = null;
-		} else {
-			bucketData[key].loading = true;
+		} else if (currentData) {
+			currentData.loading = true;
 		}
 
 		try {
@@ -79,17 +79,19 @@
 				ITEMS_PER_PAGE
 			);
 
-			bucketData[key] = {
-				items: offset === 0 ? response.items : [...bucketData[key].items, ...response.items],
+			currentData = {
+				items: offset === 0 ? response.items : [...(currentData?.items ?? []), ...response.items],
 				total: response.total,
 				loading: false,
 				hasMore: response.has_more,
 				error: null
 			};
 		} catch (e) {
-			bucketData[key] = {
-				...bucketData[key],
+			currentData = {
+				items: currentData?.items ?? [],
+				total: currentData?.total ?? 0,
 				loading: false,
+				hasMore: false,
 				error: e instanceof Error ? e.message : 'Failed to load'
 			};
 		}
@@ -100,21 +102,18 @@
 
 		if (expandedBucket === key) {
 			expandedBucket = null;
+			currentData = null;
 		} else {
 			expandedBucket = key;
-			// Load data if not already loaded
-			if (!bucketData[key] || bucketData[key].items.length === 0) {
-				loadBucketData(bucket, 0);
-			}
+			// Always load fresh data when opening bucket
+			loadBucketData(bucket, 0);
 		}
 	}
 
-	// Load more items for a bucket
+	// Load more items for current bucket (pagination only)
 	function loadMore(bucket: PayoutBucket) {
-		const key = getBucketKey(bucket);
-		const data = bucketData[key];
-		if (data && !data.loading && data.hasMore) {
-			loadBucketData(bucket, data.items.length);
+		if (currentData && !currentData.loading && currentData.hasMore) {
+			loadBucketData(bucket, currentData.items.length);
 		}
 	}
 
@@ -264,7 +263,6 @@
 			{#each sortedBuckets() as bucket}
 				{@const key = getBucketKey(bucket)}
 				{@const isExpanded = expandedBucket === key}
-				{@const data = bucketData[key]}
 				<div class="rounded-xl border border-slate-700/50 overflow-hidden bg-slate-800/30">
 					<!-- Accordion Header -->
 					<button
@@ -306,19 +304,19 @@
 					<!-- Accordion Content -->
 					{#if isExpanded}
 						<div class="border-t border-slate-700/50">
-							{#if data?.loading && data.items.length === 0}
+							{#if currentData?.loading && currentData.items.length === 0}
 								<!-- Initial loading -->
 								<div class="py-8 text-center">
 									<div class="inline-block w-6 h-6 border-2 border-[var(--color-cyan)] border-t-transparent rounded-full animate-spin"></div>
 									<p class="text-xs font-mono text-[var(--color-mist)] mt-2">Loading...</p>
 								</div>
-							{:else if data?.error}
+							{:else if currentData?.error}
 								<!-- Error -->
-								<div class="py-8 text-center text-red-400 text-sm font-mono">{data.error}</div>
-							{:else if data?.items.length === 0}
+								<div class="py-8 text-center text-red-400 text-sm font-mono">{currentData.error}</div>
+							{:else if currentData?.items.length === 0}
 								<!-- No items -->
 								<div class="py-8 text-center text-slate-500 text-sm">No payouts in this range</div>
-							{:else if data}
+							{:else if currentData}
 								<!-- Items table -->
 								<div class="max-h-[400px] overflow-auto">
 									<table class="w-full">
@@ -332,7 +330,7 @@
 											</tr>
 										</thead>
 										<tbody class="text-sm">
-											{#each data.items as item, i}
+											{#each currentData.items as item, i}
 												<tr class="border-t border-slate-700/30 hover:bg-slate-700/30 transition-colors {i % 2 === 0 ? 'bg-slate-800/20' : ''}">
 													<td class="px-4 py-2">
 														<span class="font-medium text-white font-mono">{formatMultiplier(item.payout)}</span>
@@ -387,15 +385,15 @@
 									</table>
 
 									<!-- Sentinel for lazy loading -->
-									{#if data.hasMore}
+									{#if currentData.hasMore}
 										<div
 											use:observeSentinel={bucket}
 											class="py-3 text-center text-xs font-mono text-[var(--color-mist)]"
 										>
-											{#if data.loading}
+											{#if currentData.loading}
 												<span class="inline-block w-4 h-4 border-2 border-[var(--color-cyan)] border-t-transparent rounded-full animate-spin mr-2"></span>
 											{/if}
-											Loading more... ({data.items.length} / {data.total})
+											Loading more... ({currentData.items.length} / {currentData.total})
 										</div>
 									{/if}
 								</div>
