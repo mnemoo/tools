@@ -491,6 +491,7 @@
 							<div class="glass-panel rounded-2xl p-6">
 								<DistributionTable
 									distribution={stats.distribution}
+									buckets={stats.payout_buckets}
 									mode={selectedMode ?? ''}
 									onLook={openEventModal}
 								/>
