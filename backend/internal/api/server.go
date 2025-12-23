@@ -71,6 +71,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("GET /api/mode/{mode}", s.handleMode)
 	mux.HandleFunc("GET /api/mode/{mode}/stats", s.handleModeStats)
 	mux.HandleFunc("GET /api/mode/{mode}/distribution", s.handleModeDistribution)
+	mux.HandleFunc("GET /api/mode/{mode}/distribution/bucket", s.handleModeBucketDistribution)
 	mux.HandleFunc("GET /api/mode/{mode}/outcomes", s.handleModeOutcomes)
 	mux.HandleFunc("GET /api/compare", s.handleCompare)
 
@@ -165,6 +166,7 @@ func (s *Server) GetHandler() http.Handler {
 	mux.HandleFunc("GET /api/mode/{mode}", s.handleMode)
 	mux.HandleFunc("GET /api/mode/{mode}/stats", s.handleModeStats)
 	mux.HandleFunc("GET /api/mode/{mode}/distribution", s.handleModeDistribution)
+	mux.HandleFunc("GET /api/mode/{mode}/distribution/bucket", s.handleModeBucketDistribution)
 	mux.HandleFunc("GET /api/mode/{mode}/outcomes", s.handleModeOutcomes)
 	mux.HandleFunc("GET /api/compare", s.handleCompare)
 
@@ -326,6 +328,55 @@ func (s *Server) handleModeDistribution(w http.ResponseWriter, r *http.Request) 
 	distribution := s.loader.Analyzer().BuildDistribution(table, totalWeight)
 
 	common.WriteSuccess(w, distribution)
+}
+
+func (s *Server) handleModeBucketDistribution(w http.ResponseWriter, r *http.Request) {
+	mode := r.PathValue("mode")
+	if mode == "" {
+		common.WriteError(w, http.StatusBadRequest, "mode parameter required")
+		return
+	}
+
+	table, err := s.loader.GetMode(mode)
+	if err != nil {
+		common.WriteError(w, http.StatusNotFound, err.Error())
+		return
+	}
+
+	// Parse query parameters
+	query := r.URL.Query()
+
+	rangeStart := 0.0
+	if v := query.Get("range_start"); v != "" {
+		fmt.Sscanf(v, "%f", &rangeStart)
+	}
+
+	rangeEnd := 0.0
+	if v := query.Get("range_end"); v != "" {
+		fmt.Sscanf(v, "%f", &rangeEnd)
+	}
+
+	offset := 0
+	if v := query.Get("offset"); v != "" {
+		fmt.Sscanf(v, "%d", &offset)
+	}
+
+	limit := 100
+	if v := query.Get("limit"); v != "" {
+		fmt.Sscanf(v, "%d", &limit)
+	}
+
+	req := lut.BucketDistributionRequest{
+		RangeStart: rangeStart,
+		RangeEnd:   rangeEnd,
+		Offset:     offset,
+		Limit:      limit,
+	}
+
+	totalWeight := table.TotalWeight()
+	result := s.loader.Analyzer().GetBucketDistribution(table, totalWeight, req)
+
+	common.WriteSuccess(w, result)
 }
 
 func (s *Server) handleModeOutcomes(w http.ResponseWriter, r *http.Request) {

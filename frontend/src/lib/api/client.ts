@@ -26,7 +26,8 @@ import type {
 	CrowdSimCompareResult,
 	CrowdSimPresetInfo,
 	OptimizerConfig,
-	OptimizerResult
+	OptimizerResult,
+	BucketDistributionResponse
 } from './types';
 
 const DEFAULT_BASE_URL = 'http://localhost:7754';
@@ -72,6 +73,22 @@ class LutApiClient {
 
 	async getModeDistribution(mode: string): Promise<DistributionItem[]> {
 		return this.fetch(`/api/mode/${encodeURIComponent(mode)}/distribution`);
+	}
+
+	async getModeBucketDistribution(
+		mode: string,
+		rangeStart: number,
+		rangeEnd: number,
+		offset: number = 0,
+		limit: number = 100
+	): Promise<BucketDistributionResponse> {
+		const params = new URLSearchParams({
+			range_start: rangeStart.toString(),
+			range_end: rangeEnd.toString(),
+			offset: offset.toString(),
+			limit: limit.toString()
+		});
+		return this.fetch(`/api/mode/${encodeURIComponent(mode)}/distribution/bucket?${params}`);
 	}
 
 	async getModeOutcomes(mode: string): Promise<Outcome[]> {

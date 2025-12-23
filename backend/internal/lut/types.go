@@ -337,6 +337,119 @@ func (a *Analyzer) buildPayoutBuckets(lut *stakergs.LookupTable, totalWeight uin
 	return result
 }
 
+// BucketDistributionRequest represents a request for distribution items in a bucket range.
+type BucketDistributionRequest struct {
+	RangeStart float64 `json:"range_start"`
+	RangeEnd   float64 `json:"range_end"`
+	Offset     int     `json:"offset"`
+	Limit      int     `json:"limit"`
+}
+
+// BucketDistributionResponse represents paginated distribution items for a bucket.
+type BucketDistributionResponse struct {
+	RangeStart float64            `json:"range_start"`
+	RangeEnd   float64            `json:"range_end"`
+	Items      []DistributionItem `json:"items"`
+	Total      int                `json:"total"`
+	Offset     int                `json:"offset"`
+	Limit      int                `json:"limit"`
+	HasMore    bool               `json:"has_more"`
+}
+
+// GetBucketDistribution returns distribution items for a specific bucket with pagination.
+func (a *Analyzer) GetBucketDistribution(lut *stakergs.LookupTable, totalWeight uint64, req BucketDistributionRequest) BucketDistributionResponse {
+	// Group by payout value, filtering by bucket range
+	payoutMap := make(map[uint]*payoutData)
+
+	for _, o := range lut.Outcomes {
+		payout := float64(o.Payout) / 100.0
+
+		// Check if payout falls in bucket range
+		inBucket := false
+		if req.RangeStart == 0 && req.RangeEnd == 0 {
+			// Zero bucket: exact match
+			inBucket = payout == 0
+		} else if req.RangeEnd >= float64(lut.MaxPayout())/100.0*0.99 {
+			// Last bucket: include all >= range_start
+			inBucket = payout >= req.RangeStart
+		} else {
+			// Normal bucket: [start, end)
+			inBucket = payout >= req.RangeStart && payout < req.RangeEnd
+		}
+
+		if !inBucket {
+			continue
+		}
+
+		if payoutMap[o.Payout] == nil {
+			payoutMap[o.Payout] = &payoutData{}
+		}
+		payoutMap[o.Payout].weight += o.Weight
+		payoutMap[o.Payout].simIDs = append(payoutMap[o.Payout].simIDs, o.SimID)
+	}
+
+	// Convert to sorted slice
+	items := make([]DistributionItem, 0, len(payoutMap))
+	for payout, data := range payoutMap {
+		odds := float64(totalWeight) / float64(data.weight)
+
+		// Keep only first 10 sim_ids for the response
+		simIDs := data.simIDs
+		if len(simIDs) > 10 {
+			simIDs = simIDs[:10]
+		}
+
+		items = append(items, DistributionItem{
+			Payout: round2(float64(payout) / 100.0),
+			Weight: data.weight,
+			Odds:   formatOdds(odds),
+			Count:  len(data.simIDs),
+			SimIDs: simIDs,
+		})
+	}
+
+	// Sort by payout descending (highest first)
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].Payout > items[j].Payout
+	})
+
+	total := len(items)
+
+	// Apply pagination
+	offset := req.Offset
+	if offset < 0 {
+		offset = 0
+	}
+	if offset > total {
+		offset = total
+	}
+
+	limit := req.Limit
+	if limit <= 0 {
+		limit = 100
+	}
+	if limit > 500 {
+		limit = 500
+	}
+
+	end := offset + limit
+	if end > total {
+		end = total
+	}
+
+	paginatedItems := items[offset:end]
+
+	return BucketDistributionResponse{
+		RangeStart: req.RangeStart,
+		RangeEnd:   req.RangeEnd,
+		Items:      paginatedItems,
+		Total:      total,
+		Offset:     offset,
+		Limit:      limit,
+		HasMore:    end < total,
+	}
+}
+
 func (a *Analyzer) getTopPayouts(lut *stakergs.LookupTable, totalWeight uint64, limit int) []PayoutInfo {
 	// Group outcomes by payout value
 	type payoutGroup struct {

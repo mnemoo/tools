@@ -675,3 +675,14 @@ export interface BucketPresetsResponse {
 	conservative: BucketConfig[];
 	aggressive: BucketConfig[];
 }
+
+// Bucket Distribution API types
+export interface BucketDistributionResponse {
+	range_start: number;
+	range_end: number;
+	items: DistributionItem[];
+	total: number;
+	offset: number;
+	limit: number;
+	has_more: boolean;
+}
