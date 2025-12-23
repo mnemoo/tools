@@ -9,7 +9,7 @@ import (
 // SimConfig holds simulation parameters.
 type SimConfig struct {
 	PlayerCount     int     `json:"player_count"`      // Number of simulated players (1000-10000)
-	SpinsPerSession int     `json:"spins_per_session"` // Spins per player session (100-300)
+	SpinsPerSession int     `json:"spins_per_session"` // Spins per player session (1-1000)
 	InitialBalance  float64 `json:"initial_balance"`   // Starting balance
 	BetAmount       float64 `json:"bet_amount"`        // Bet per spin
 	BigWinThreshold float64 `json:"big_win_threshold"` // Multiplier threshold for "big win" (e.g., 10.0)

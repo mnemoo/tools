@@ -78,21 +78,21 @@
 
 			<!-- Spins Per Session -->
 			<div class="space-y-2">
-				<div class="flex items-center justify-between">
-					<label class="text-sm font-mono text-[var(--color-mist)]" for="spins_per_session">SPINS/SESSION</label>
-					<span class="text-base font-mono text-[var(--color-cyan)]">{config.spins_per_session}</span>
-				</div>
+				<label class="text-sm font-mono text-[var(--color-mist)]" for="spins_per_session">SPINS/SESSION</label>
 				<input
-					type="range"
+					type="number"
 					id="spins_per_session"
-					min="50"
-					max="500"
-					step="10"
+					min="1"
+					max="1000"
+					step="1"
 					bind:value={config.spins_per_session}
-					class="w-full h-2 bg-[var(--color-slate)] rounded-full appearance-none cursor-pointer
-						   [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5
-						   [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--color-cyan)]
-						   [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-[0_0_10px_var(--color-cyan)]
+					onchange={(e) => {
+						const val = Math.max(1, Math.min(1000, Number(e.currentTarget.value) || 1));
+						config.spins_per_session = val;
+						e.currentTarget.value = String(val);
+					}}
+					class="w-full h-10 px-3 rounded-lg bg-[var(--color-onyx)] border border-white/[0.05] text-[var(--color-light)] font-mono text-base
+						   focus:outline-none focus:border-[var(--color-cyan)]/50 focus:ring-1 focus:ring-[var(--color-cyan)]/20
 						   disabled:opacity-40"
 					{disabled}
 				/>
