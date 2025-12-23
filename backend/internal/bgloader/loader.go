@@ -61,6 +61,10 @@ type BackgroundLoader struct {
 	stopCh       chan struct{}
 	wg           sync.WaitGroup
 
+	// Per-mode cancellation channels to interrupt reload when file changes again
+	modeCancelCh map[string]chan struct{}
+	modeCancelMu sync.Mutex
+
 	// How often to yield CPU in low priority mode (every N lines)
 	lowPriorityBatchSize int
 	// Delay after each batch in low priority mode
@@ -77,6 +81,7 @@ func NewBackgroundLoader(loader *lut.Loader, hub *ws.Hub) *BackgroundLoader {
 		baseDir:               loader.BaseDir(),
 		modeStatuses:          make(map[string]*ModeStatus),
 		stopCh:                make(chan struct{}),
+		modeCancelCh:          make(map[string]chan struct{}),
 		lowPriorityBatchSize:  1000,                 // Process 1000 lines then yield
 		lowPriorityBatchDelay: 1 * time.Millisecond, // Short pause after batch (~50% CPU)
 		progressInterval:      1000,                 // Update every 1000 lines
@@ -180,6 +185,17 @@ func (bl *BackgroundLoader) ReloadMode(modeName string) error {
 		return fmt.Errorf("mode %q has no events file", modeName)
 	}
 
+	// Cancel any previous reload for this mode
+	bl.modeCancelMu.Lock()
+	if oldCancelCh, exists := bl.modeCancelCh[modeName]; exists {
+		close(oldCancelCh) // Signal old goroutine to stop
+		log.Printf("BackgroundLoader: Cancelled previous reload for mode %q", modeName)
+	}
+	// Create new cancel channel for this reload
+	cancelCh := make(chan struct{})
+	bl.modeCancelCh[modeName] = cancelCh
+	bl.modeCancelMu.Unlock()
+
 	// Clear existing events for this mode
 	bl.loader.EventsLoader().ClearMode(modeName)
 
@@ -203,8 +219,10 @@ func (bl *BackgroundLoader) ReloadMode(modeName string) error {
 	})
 
 	// Load mode in background with retry
+	bl.wg.Add(1)
 	go func() {
-		bl.loadModeWithRetry(*modeConfig, 3)
+		defer bl.wg.Done()
+		bl.loadModeWithRetryCancel(*modeConfig, 3, cancelCh)
 	}()
 
 	return nil
@@ -213,12 +231,32 @@ func (bl *BackgroundLoader) ReloadMode(modeName string) error {
 // loadModeWithRetry attempts to load a mode with retries on failure.
 // This handles cases where the file might still be incomplete.
 func (bl *BackgroundLoader) loadModeWithRetry(mode stakergs.ModeConfig, maxRetries int) {
+	bl.loadModeWithRetryCancel(mode, maxRetries, nil)
+}
+
+// loadModeWithRetryCancel attempts to load a mode with retries and cancellation support.
+func (bl *BackgroundLoader) loadModeWithRetryCancel(mode stakergs.ModeConfig, maxRetries int, cancelCh <-chan struct{}) {
 	var lastErr error
 	for attempt := 0; attempt <= maxRetries; attempt++ {
+		// Check if cancelled
+		select {
+		case <-cancelCh:
+			log.Printf("BackgroundLoader: Reload cancelled for mode %q", mode.Name)
+			return
+		default:
+		}
+
 		if attempt > 0 {
 			delay := time.Duration(attempt) * 2 * time.Second
 			log.Printf("BackgroundLoader: Retry %d/%d for mode %q in %v", attempt, maxRetries, mode.Name, delay)
-			time.Sleep(delay)
+
+			// Wait with cancellation support
+			select {
+			case <-cancelCh:
+				log.Printf("BackgroundLoader: Reload cancelled for mode %q during retry wait", mode.Name)
+				return
+			case <-time.After(delay):
+			}
 
 			// Reset status for retry
 			bl.mu.Lock()
@@ -231,9 +269,15 @@ func (bl *BackgroundLoader) loadModeWithRetry(mode stakergs.ModeConfig, maxRetri
 		}
 
 		// Try to load the mode
-		err := bl.loadModeInternal(mode)
+		err := bl.loadModeInternalCancel(mode, cancelCh)
 		if err == nil {
 			return // Success
+		}
+
+		// Check if it was cancelled
+		if err.Error() == "cancelled" {
+			log.Printf("BackgroundLoader: Reload cancelled for mode %q", mode.Name)
+			return
 		}
 
 		lastErr = err
@@ -353,14 +397,14 @@ func (bl *BackgroundLoader) loadAllModes(modes []stakergs.ModeConfig) {
 
 // loadMode loads events for a single mode (wrapper for backwards compatibility).
 func (bl *BackgroundLoader) loadMode(mode stakergs.ModeConfig) {
-	if err := bl.loadModeInternal(mode); err != nil {
+	if err := bl.loadModeInternalCancel(mode, nil); err != nil {
 		bl.setModeError(mode.Name, err.Error())
 	}
 }
 
-// loadModeInternal loads events for a single mode with progress tracking.
-// Returns an error if loading fails (e.g., EOF, corrupt file).
-func (bl *BackgroundLoader) loadModeInternal(mode stakergs.ModeConfig) error {
+// loadModeInternalCancel loads events for a single mode with progress tracking and cancellation.
+// Returns an error if loading fails (e.g., EOF, corrupt file) or "cancelled" if cancelled.
+func (bl *BackgroundLoader) loadModeInternalCancel(mode stakergs.ModeConfig, cancelCh <-chan struct{}) error {
 	filePath := filepath.Join(bl.baseDir, mode.Events)
 
 	// Get file size
@@ -419,10 +463,18 @@ func (bl *BackgroundLoader) loadModeInternal(mode stakergs.ModeConfig) error {
 	lastProgressUpdate := time.Now()
 
 	for scanner.Scan() {
+		// Check for global stop or per-mode cancellation
 		select {
 		case <-bl.stopCh:
 			return fmt.Errorf("loading stopped")
 		default:
+		}
+		if cancelCh != nil {
+			select {
+			case <-cancelCh:
+				return fmt.Errorf("cancelled")
+			default:
+			}
 		}
 
 		lineNum++

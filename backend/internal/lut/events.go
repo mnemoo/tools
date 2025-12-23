@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/klauspost/compress/zstd"
 )
@@ -16,6 +17,7 @@ import (
 type EventsLoader struct {
 	baseDir string
 	cache   map[string]*EventsIndex // mode -> events index
+	mu      sync.RWMutex            // protects cache from concurrent access
 }
 
 // EventsIndex holds indexed events for fast lookup by sim_id.
@@ -44,8 +46,9 @@ func NewEventsLoader(baseDir string) *EventsLoader {
 	}
 }
 
-// findMode does case-insensitive lookup for mode in cache
-func (e *EventsLoader) findMode(mode string) (*EventsIndex, bool) {
+// findMode does case-insensitive lookup for mode in cache.
+// IMPORTANT: caller must hold at least e.mu.RLock()
+func (e *EventsLoader) findModeLocked(mode string) (*EventsIndex, bool) {
 	modeLower := strings.ToLower(mode)
 	for name, index := range e.cache {
 		if strings.ToLower(name) == modeLower {
@@ -104,19 +107,26 @@ func (e *EventsLoader) LoadEvents(mode, eventsFile string) error {
 	}
 
 	index.Count = len(index.Events)
+
+	e.mu.Lock()
 	e.cache[mode] = index
+	e.mu.Unlock()
 
 	return nil
 }
 
 // GetEvent retrieves a single event by sim_id (case-insensitive mode lookup).
 func (e *EventsLoader) GetEvent(mode string, simID int) (json.RawMessage, error) {
-	index, ok := e.findMode(mode)
+	e.mu.RLock()
+	index, ok := e.findModeLocked(mode)
 	if !ok {
+		e.mu.RUnlock()
 		return nil, fmt.Errorf("events for mode %q not loaded", mode)
 	}
 
 	event, ok := index.Events[simID]
+	e.mu.RUnlock()
+
 	if !ok {
 		return nil, fmt.Errorf("event with sim_id %d not found in mode %q", simID, mode)
 	}
@@ -148,22 +158,29 @@ func (e *EventsLoader) GetEventInfo(mode string, simID int, outcome *OutcomeStat
 
 // IsLoaded checks if events for a mode are loaded (case-insensitive).
 func (e *EventsLoader) IsLoaded(mode string) bool {
-	_, ok := e.findMode(mode)
+	e.mu.RLock()
+	_, ok := e.findModeLocked(mode)
+	e.mu.RUnlock()
 	return ok
 }
 
 // GetLoadedModes returns list of modes with loaded events.
 func (e *EventsLoader) GetLoadedModes() []string {
+	e.mu.RLock()
 	modes := make([]string, 0, len(e.cache))
 	for mode := range e.cache {
 		modes = append(modes, mode)
 	}
+	e.mu.RUnlock()
 	return modes
 }
 
 // GetEventCount returns number of events for a mode (case-insensitive).
 func (e *EventsLoader) GetEventCount(mode string) int {
-	if index, ok := e.findMode(mode); ok {
+	e.mu.RLock()
+	index, ok := e.findModeLocked(mode)
+	e.mu.RUnlock()
+	if ok {
 		return index.Count
 	}
 	return 0
@@ -171,22 +188,28 @@ func (e *EventsLoader) GetEventCount(mode string) int {
 
 // SetEvents stores events loaded by the background loader.
 func (e *EventsLoader) SetEvents(mode string, events map[int]json.RawMessage, filePath string) {
+	e.mu.Lock()
 	e.cache[mode] = &EventsIndex{
 		Mode:     mode,
 		FilePath: filePath,
 		Events:   events,
 		Count:    len(events),
 	}
+	e.mu.Unlock()
 }
 
 // ClearAll removes all cached events.
 func (e *EventsLoader) ClearAll() {
+	e.mu.Lock()
 	e.cache = make(map[string]*EventsIndex)
+	e.mu.Unlock()
 }
 
 // ClearMode removes cached events for a specific mode.
 func (e *EventsLoader) ClearMode(mode string) {
+	e.mu.Lock()
 	delete(e.cache, mode)
+	e.mu.Unlock()
 }
 
 // StreamEvents streams events through a callback (for large files).

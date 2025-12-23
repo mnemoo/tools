@@ -44,7 +44,7 @@ func NewBookWatcher(baseDir string, bookFiles map[string]string, onReload Reload
 		baseDir:    baseDir,
 		bookFiles:  bookFiles,
 		onReload:   onReload,
-		debounce:   500 * time.Millisecond, // debounce rapid changes
+		debounce:   2 * time.Second, // debounce rapid changes
 		stopCh:     make(chan struct{}),
 		lastChange: make(map[string]time.Time),
 	}, nil
