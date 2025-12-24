@@ -29,6 +29,7 @@
 
 	// Sort buckets by range_end descending (biggest first)
 	let sortedBuckets = $derived(() => {
+		if (!buckets || buckets.length === 0) return [];
 		return [...buckets].sort((a, b) => b.range_end - a.range_end);
 	});
 
@@ -230,6 +231,7 @@
 
 	// Calculate total unique payouts from buckets
 	let totalPayouts = $derived(() => {
+		if (!buckets) return 0;
 		return buckets.reduce((sum, b) => sum + b.count, 0);
 	});
 </script>
@@ -256,7 +258,7 @@
 		{/if}
 	</div>
 
-	{#if buckets.length === 0}
+	{#if !buckets || buckets.length === 0}
 		<div class="py-8 text-center text-slate-500">No data</div>
 	{:else}
 		<div class="space-y-2">

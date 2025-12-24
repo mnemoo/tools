@@ -477,16 +477,17 @@ func (bl *BackgroundLoader) loadModeInternalCancel(mode stakergs.ModeConfig, can
 			}
 		}
 
-		lineNum++
 		line := scanner.Bytes()
 		if len(line) == 0 {
+			lineNum++
 			continue
 		}
 
-		// Copy event data
+		// Copy event data (0-indexed to match CSV sim_id offset handling)
 		eventCopy := make(json.RawMessage, len(line))
 		copy(eventCopy, line)
 		events[lineNum] = eventCopy
+		lineNum++
 
 		// Send progress update
 		if lineNum%bl.progressInterval == 0 || time.Since(lastProgressUpdate) > 500*time.Millisecond {
