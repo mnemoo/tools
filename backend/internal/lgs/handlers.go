@@ -350,7 +350,7 @@ func (h *Handlers) Play(w http.ResponseWriter, r *http.Request) {
 	// Get event data (state) if available - extract only "events" array from book
 	var stateData json.RawMessage
 	eventsLoader := h.loader.EventsLoader()
-	if bookJSON, err := eventsLoader.GetEvent(req.Mode, outcome.SimID); err == nil {
+	if bookJSON, err := eventsLoader.GetEvent(req.Mode, outcome.SimID, table.SimIDOffset); err == nil {
 		stateData = extractEvents(bookJSON)
 	} else {
 		// Create minimal state if no event data
@@ -1037,7 +1037,8 @@ func (h *Handlers) Replay(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get event data (state) - extract only "events" array from book
-	bookJSON, err := eventsLoader.GetEvent(mode, simID)
+	// Use SimIDOffset for backwards compatibility with old (1-indexed) and new (0-indexed) formats
+	bookJSON, err := eventsLoader.GetEvent(mode, simID, table.SimIDOffset)
 	if err != nil {
 		h.sendError(w, fmt.Sprintf("event not found: %v", err), http.StatusNotFound)
 		return

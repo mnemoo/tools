@@ -548,6 +548,13 @@ func (s *Server) handleGetEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get lookup table to access SimIDOffset for backwards compatibility
+	table, err := s.loader.GetMode(mode)
+	if err != nil {
+		common.WriteError(w, http.StatusNotFound, err.Error())
+		return
+	}
+
 	// Get outcome statistics
 	outcome, err := s.loader.GetOutcome(mode, simID)
 	if err != nil {
@@ -571,7 +578,8 @@ func (s *Server) handleGetEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get event data (may not exist even if events file is loaded)
-	eventInfo, err := s.loader.EventsLoader().GetEventInfo(mode, simID, outcome)
+	// Use SimIDOffset for backwards compatibility with old (1-indexed) and new (0-indexed) formats
+	eventInfo, err := s.loader.EventsLoader().GetEventInfo(mode, simID, table.SimIDOffset, outcome)
 	if err != nil {
 		// Event not found in events file, return outcome stats without event
 		common.WriteSuccess(w, map[string]interface{}{

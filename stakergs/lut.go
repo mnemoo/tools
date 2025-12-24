@@ -18,16 +18,17 @@ type ModeConfig struct {
 // LookupTable represents the complete set of game outcomes for a specific mode.
 // Used by Stake Engine to determine payouts based on weighted random selection.
 type LookupTable struct {
-	Outcomes []Outcome `json:"outcomes"`
-	GameID   string    `json:"game_id"`
-	Mode     string    `json:"mode"` // e.g., "base", "bonus", "freegame"
-	Cost     float64   `json:"cost"` // Cost per spin
+	Outcomes    []Outcome `json:"outcomes"`
+	GameID      string    `json:"game_id"`
+	Mode        string    `json:"mode"`          // e.g., "base", "bonus", "freegame"
+	Cost        float64   `json:"cost"`          // Cost per spin
+	SimIDOffset int       `json:"sim_id_offset"` // Minimum sim_id in LUT (0 or 1), used for events lookup
 }
 
 // Outcome represents a single simulation outcome with weight and payout.
-// CSV format: sim_id,weight,payout (e.g., "1,1996456169598,0")
+// CSV format: sim_id,weight,payout (e.g., "0,1996456169598,0" or "1,1996456169598,0")
 type Outcome struct {
-	SimID  int    `json:"sim_id"` // Simulation/payline number (1-based in CSV)
+	SimID  int    `json:"sim_id"` // Simulation/payline number (0-based or 1-based depending on Math SDK version)
 	Weight uint64 `json:"weight"` // Selection weight (uint64 for large values)
 	Payout uint   `json:"payout"` // Payout multiplier * 100 (e.g., 550 = 5.50x)
 }

@@ -129,10 +129,23 @@ func (l *Loader) loadCSV(mode stakergs.ModeConfig) (*stakergs.LookupTable, error
 		return nil, fmt.Errorf("error reading CSV: %w", err)
 	}
 
+	// Determine SimIDOffset (minimum sim_id) for backwards compatibility
+	// Old format: sim_id starts from 1, New format: sim_id starts from 0
+	simIDOffset := 0
+	if len(outcomes) > 0 {
+		simIDOffset = outcomes[0].SimID
+		for _, o := range outcomes {
+			if o.SimID < simIDOffset {
+				simIDOffset = o.SimID
+			}
+		}
+	}
+
 	return &stakergs.LookupTable{
-		Outcomes: outcomes,
-		Mode:     mode.Name,
-		Cost:     mode.Cost,
+		Outcomes:    outcomes,
+		Mode:        mode.Name,
+		Cost:        mode.Cost,
+		SimIDOffset: simIDOffset,
 	}, nil
 }
 

@@ -90,16 +90,17 @@ func (e *EventsLoader) LoadEvents(mode, eventsFile string) error {
 
 	lineNum := 0
 	for scanner.Scan() {
-		lineNum++
 		line := scanner.Bytes()
 		if len(line) == 0 {
+			lineNum++
 			continue
 		}
 
-		// sim_id = line number (1-indexed)
+		// sim_id = line index (0-indexed, matches CSV sim_id)
 		eventCopy := make(json.RawMessage, len(line))
 		copy(eventCopy, line)
 		index.Events[lineNum] = eventCopy
+		lineNum++
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -116,7 +117,8 @@ func (e *EventsLoader) LoadEvents(mode, eventsFile string) error {
 }
 
 // GetEvent retrieves a single event by sim_id (case-insensitive mode lookup).
-func (e *EventsLoader) GetEvent(mode string, simID int) (json.RawMessage, error) {
+// simIDOffset is the minimum sim_id from the LUT (0 or 1) for backwards compatibility.
+func (e *EventsLoader) GetEvent(mode string, simID int, simIDOffset int) (json.RawMessage, error) {
 	e.mu.RLock()
 	index, ok := e.findModeLocked(mode)
 	if !ok {
@@ -124,19 +126,24 @@ func (e *EventsLoader) GetEvent(mode string, simID int) (json.RawMessage, error)
 		return nil, fmt.Errorf("events for mode %q not loaded", mode)
 	}
 
-	event, ok := index.Events[simID]
+	// Convert sim_id to 0-indexed event position
+	// Old format: sim_id starts from 1, so eventIndex = simID - 1
+	// New format: sim_id starts from 0, so eventIndex = simID - 0
+	eventIndex := simID - simIDOffset
+	event, ok := index.Events[eventIndex]
 	e.mu.RUnlock()
 
 	if !ok {
-		return nil, fmt.Errorf("event with sim_id %d not found in mode %q", simID, mode)
+		return nil, fmt.Errorf("event with sim_id %d (index %d) not found in mode %q", simID, eventIndex, mode)
 	}
 
 	return event, nil
 }
 
 // GetEventInfo retrieves event with full statistics.
-func (e *EventsLoader) GetEventInfo(mode string, simID int, outcome *OutcomeStats) (*EventInfo, error) {
-	event, err := e.GetEvent(mode, simID)
+// simIDOffset is the minimum sim_id from the LUT (0 or 1) for backwards compatibility.
+func (e *EventsLoader) GetEventInfo(mode string, simID int, simIDOffset int, outcome *OutcomeStats) (*EventInfo, error) {
+	event, err := e.GetEvent(mode, simID, simIDOffset)
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +220,8 @@ func (e *EventsLoader) ClearMode(mode string) {
 }
 
 // StreamEvents streams events through a callback (for large files).
-func (e *EventsLoader) StreamEvents(eventsFile string, callback func(lineNum int, event json.RawMessage) error) error {
+// lineIndex passed to callback is 0-indexed to match CSV sim_id format.
+func (e *EventsLoader) StreamEvents(eventsFile string, callback func(lineIndex int, event json.RawMessage) error) error {
 	filePath := filepath.Join(e.baseDir, eventsFile)
 
 	file, err := os.Open(filePath)
@@ -229,29 +237,28 @@ func (e *EventsLoader) StreamEvents(eventsFile string, callback func(lineNum int
 	defer decoder.Close()
 
 	reader := bufio.NewReader(decoder)
-	lineNum := 0
+	lineIndex := 0
 
 	for {
 		line, err := reader.ReadBytes('\n')
 		if err != nil {
 			if err == io.EOF {
 				if len(line) > 0 {
-					lineNum++
-					if err := callback(lineNum, line); err != nil {
+					if err := callback(lineIndex, line); err != nil {
 						return err
 					}
 				}
 				break
 			}
-			return fmt.Errorf("error reading line %d: %w", lineNum+1, err)
+			return fmt.Errorf("error reading line %d: %w", lineIndex, err)
 		}
 
-		lineNum++
 		if len(line) > 0 {
-			if err := callback(lineNum, line); err != nil {
+			if err := callback(lineIndex, line); err != nil {
 				return err
 			}
 		}
+		lineIndex++
 	}
 
 	return nil
