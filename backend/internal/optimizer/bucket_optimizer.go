@@ -25,13 +25,13 @@ const (
 
 // BucketConfig defines a payout range and its probability constraint
 type BucketConfig struct {
-	Name        string               `json:"name"`         // Human-readable name (e.g., "small_wins")
-	MinPayout   float64              `json:"min_payout"`   // Minimum payout in range (inclusive)
-	MaxPayout   float64              `json:"max_payout"`   // Maximum payout in range (exclusive, except for last bucket)
-	Type        BucketConstraintType `json:"type"`         // "frequency", "rtp_percent", or "auto"
-	Frequency   float64              `json:"frequency"`    // 1 in N spins (e.g., 20 = 1 in 20 spins)
-	RTPPercent  float64              `json:"rtp_percent"`  // % of total RTP (e.g., 0.5 = 0.5% of RTP)
-	AutoExponent float64             `json:"auto_exponent"` // For auto: weight ∝ 1/payout^exponent (default 1.0, higher = steeper)
+	Name         string               `json:"name"`          // Human-readable name (e.g., "small_wins")
+	MinPayout    float64              `json:"min_payout"`    // Minimum payout in range (inclusive)
+	MaxPayout    float64              `json:"max_payout"`    // Maximum payout in range (exclusive, except for last bucket)
+	Type         BucketConstraintType `json:"type"`          // "frequency", "rtp_percent", or "auto"
+	Frequency    float64              `json:"frequency"`     // 1 in N spins (e.g., 20 = 1 in 20 spins)
+	RTPPercent   float64              `json:"rtp_percent"`   // % of total RTP (e.g., 0.5 = 0.5% of RTP)
+	AutoExponent float64              `json:"auto_exponent"` // For auto: weight ∝ 1/payout^exponent (default 1.0, higher = steeper)
 }
 
 // BucketOptimizerConfig contains full configuration for bucket-based optimization
@@ -95,38 +95,38 @@ type BucketResult struct {
 
 // BucketOptimizerResult contains the full optimization result
 type BucketOptimizerResult struct {
-	OriginalRTP     float64               `json:"original_rtp"`
-	FinalRTP        float64               `json:"final_rtp"`
-	TargetRTP       float64               `json:"target_rtp"`
-	Converged       bool                  `json:"converged"`
-	NewWeights      []uint64              `json:"new_weights"`
-	BucketResults   []BucketResult        `json:"bucket_results"`
-	LossResult      *BucketResult         `json:"loss_result"`
-	TotalWeight     uint64                `json:"total_weight"`
-	Warnings        []string              `json:"warnings,omitempty"`
-	OutcomeDetails  []OutcomeDetail       `json:"outcome_details,omitempty"`
+	OriginalRTP    float64         `json:"original_rtp"`
+	FinalRTP       float64         `json:"final_rtp"`
+	TargetRTP      float64         `json:"target_rtp"`
+	Converged      bool            `json:"converged"`
+	NewWeights     []uint64        `json:"new_weights"`
+	BucketResults  []BucketResult  `json:"bucket_results"`
+	LossResult     *BucketResult   `json:"loss_result"`
+	TotalWeight    uint64          `json:"total_weight"`
+	Warnings       []string        `json:"warnings,omitempty"`
+	OutcomeDetails []OutcomeDetail `json:"outcome_details,omitempty"`
 }
 
 // OutcomeDetail shows how each outcome was assigned
 type OutcomeDetail struct {
-	SimID      int     `json:"sim_id"`
-	Payout     float64 `json:"payout"`
-	OldWeight  uint64  `json:"old_weight"`
-	NewWeight  uint64  `json:"new_weight"`
-	BucketName string  `json:"bucket_name"`
+	SimID       int     `json:"sim_id"`
+	Payout      float64 `json:"payout"`
+	OldWeight   uint64  `json:"old_weight"`
+	NewWeight   uint64  `json:"new_weight"`
+	BucketName  string  `json:"bucket_name"`
 	Probability float64 `json:"probability"`
 }
 
 // bucketAssignment holds outcomes assigned to a bucket during optimization
 type bucketAssignment struct {
-	config            BucketConfig
-	outcomeIndices    []int
-	payouts           []float64
-	targetProb        float64   // Total probability for bucket (sum of outcomeProbs for auto)
-	outcomeProbs      []float64 // Per-outcome probabilities (for auto buckets with varying probs)
-	avgPayout         float64
-	rtpContribution   float64
-	isAuto            bool // True if this is an auto bucket
+	config          BucketConfig
+	outcomeIndices  []int
+	payouts         []float64
+	targetProb      float64   // Total probability for bucket (sum of outcomeProbs for auto)
+	outcomeProbs    []float64 // Per-outcome probabilities (for auto buckets with varying probs)
+	avgPayout       float64
+	rtpContribution float64
+	isAuto          bool // True if this is an auto bucket
 }
 
 // OptimizeTable optimizes a lookup table using bucket constraints
@@ -149,6 +149,24 @@ func (o *BucketOptimizer) OptimizeTable(table *stakergs.LookupTable) (*BucketOpt
 		originalWeights[i] = outcome.Weight
 	}
 
+	// Diagnostics: log max and top 5 normalized payouts to help debug unit mismatches
+	if len(payouts) > 0 {
+		maxP := payouts[0]
+		for _, p := range payouts {
+			if p > maxP {
+				maxP = p
+			}
+		}
+		tmp := make([]float64, len(payouts))
+		copy(tmp, payouts)
+		sort.Slice(tmp, func(i, j int) bool { return tmp[i] > tmp[j] })
+		topN := 5
+		if len(tmp) < topN {
+			topN = len(tmp)
+		}
+		fmt.Printf("[OPTIMIZER] mode=%s cost=%.2f max_normalized=%.2f top%d=%v\n", table.Mode, cost, maxP, topN, tmp[:topN])
+	}
+
 	originalRTP := calculateRTPFromWeights(originalWeights, payouts)
 
 	// Assign outcomes to buckets
@@ -159,7 +177,8 @@ func (o *BucketOptimizer) OptimizeTable(table *stakergs.LookupTable) (*BucketOpt
 	warnings = append(warnings, probWarnings...)
 
 	// Calculate weights
-	newWeights, bucketResults, lossResult := o.calculateWeights(payouts, assignments, lossIndices)
+	newWeights, bucketResults, lossResult, weightWarnings := o.calculateWeights(payouts, assignments, lossIndices)
+	warnings = append(warnings, weightWarnings...)
 
 	// Calculate final RTP
 	finalRTP := calculateRTPFromWeights(newWeights, payouts)
@@ -400,7 +419,7 @@ func (o *BucketOptimizer) calculateTargetProbabilities(assignments []bucketAssig
 }
 
 // calculateWeights converts probabilities to weights
-func (o *BucketOptimizer) calculateWeights(payouts []float64, assignments []bucketAssignment, lossIndices []int) ([]uint64, []BucketResult, *BucketResult) {
+func (o *BucketOptimizer) calculateWeights(payouts []float64, assignments []bucketAssignment, lossIndices []int) ([]uint64, []BucketResult, *BucketResult, []string) {
 	n := len(payouts)
 	weights := make([]uint64, n)
 
@@ -412,9 +431,25 @@ func (o *BucketOptimizer) calculateWeights(payouts []float64, assignments []buck
 	var totalWinRTP float64
 
 	bucketResults := make([]BucketResult, 0, len(assignments))
+	var warnings []string
 
 	for _, bucket := range assignments {
 		if len(bucket.outcomeIndices) == 0 {
+			// Include empty bucket result so UI can show unused buckets
+			bucketResults = append(bucketResults, BucketResult{
+				Name:              bucket.config.Name,
+				MinPayout:         bucket.config.MinPayout,
+				MaxPayout:         bucket.config.MaxPayout,
+				OutcomeCount:      0,
+				TargetProbability: bucket.targetProb,
+				TargetFrequency:   0,
+				ActualProbability: 0,
+				ActualFrequency:   0,
+				RTPContribution:   0,
+				TotalWeight:       0,
+				AvgPayout:         bucket.avgPayout,
+			})
+			warnings = append(warnings, fmt.Sprintf("bucket '%s' has no matching outcomes", bucket.config.Name))
 			continue
 		}
 
@@ -546,13 +581,19 @@ func (o *BucketOptimizer) calculateWeights(payouts []float64, assignments []buck
 	// Update bucket results with actual probabilities and RTP contributions
 	totalWeight := sumUint64(weights)
 	for i := range bucketResults {
-		bucketResults[i].ActualProbability = float64(bucketResults[i].TotalWeight) / float64(totalWeight)
-		bucketResults[i].ActualFrequency = 1.0 / bucketResults[i].ActualProbability
-		// Recalculate RTP contribution based on actual probability
-		bucketResults[i].RTPContribution = bucketResults[i].ActualProbability * bucketResults[i].AvgPayout * 100
+		if bucketResults[i].TotalWeight > 0 && totalWeight > 0 {
+			bucketResults[i].ActualProbability = float64(bucketResults[i].TotalWeight) / float64(totalWeight)
+			bucketResults[i].ActualFrequency = 1.0 / bucketResults[i].ActualProbability
+			// Recalculate RTP contribution based on actual probability
+			bucketResults[i].RTPContribution = bucketResults[i].ActualProbability * bucketResults[i].AvgPayout * 100
+		} else {
+			bucketResults[i].ActualProbability = 0
+			bucketResults[i].ActualFrequency = 0
+			bucketResults[i].RTPContribution = 0
+		}
 	}
 
-	return weights, bucketResults, lossResult
+	return weights, bucketResults, lossResult, warnings
 }
 
 // fineTuneLossWeight adjusts loss weight to hit target RTP precisely
@@ -801,11 +842,11 @@ func suggestBonusBuckets(minPayout, maxPayout, targetRTP float64) []BucketConfig
 		}
 
 		buckets = append(buckets, BucketConfig{
-			Name:         "above_avg",
-			MinPayout:    midHigh,
-			MaxPayout:    highThreshold,
-			Type:         ConstraintRTPPercent,
-			RTPPercent:   15, // 15% of RTP for good outcomes
+			Name:       "above_avg",
+			MinPayout:  midHigh,
+			MaxPayout:  highThreshold,
+			Type:       ConstraintRTPPercent,
+			RTPPercent: 15, // 15% of RTP for good outcomes
 		})
 
 		// Jackpot tier (if exists)
