@@ -14,7 +14,7 @@
 	};
 
 	type ShortBucket = [number, number, number, number]; // [min, max, type(0/1/2), value]
-	type ShortConfig = { r: number; b: ShortBucket[] };
+	type ShortConfig = { r: number; f: 'absolute' | 'normalized'; b: ShortBucket[] };
 
 	type BucketResult = {
 		name: string;
@@ -55,6 +55,10 @@
 
 	let targetRtp = $state(0.97);
 	let buckets = $state<BucketConfig[]>([]);
+
+	// Input format: whether the UI fields are absolute multipliers (abs) or normalized (units where 1.0 == mode cost)
+	let inputFormat = $state<'absolute' | 'normalized'>('absolute');
+
 	let isLoading = $state(false);
 	let result = $state<{
 		original_rtp: number;
@@ -87,6 +91,7 @@
 	function toShortConfig(): string {
 		const short: ShortConfig = {
 			r: Math.round(targetRtp * 100),
+			f: inputFormat,
 			b: buckets.map((b) => {
 				const t = TYPE_MAP[b.type];
 				const v = b.type === 'frequency' ? (b.frequency ?? 10) : b.type === 'rtp_percent' ? (b.rtp_percent ?? 1) : (b.auto_exponent ?? 1);
@@ -102,6 +107,9 @@
 			const json = atob(code.trim());
 			const short: ShortConfig = JSON.parse(json);
 			if (!short.r || !Array.isArray(short.b)) return false;
+
+			// Restore input format if present (backwards compatible)
+			inputFormat = (short as any).f ?? 'absolute';
 
 			targetRtp = short.r / 100;
 			buckets = short.b.map(([min, max, t, v], i) => {
@@ -168,6 +176,35 @@
 		}
 		initialized = true;
 	});
+
+	// Convert buckets between absolute and normalized using mode cost
+	function canConvert(): boolean {
+		return !!modeInfo?.cost && modeInfo.cost > 0;
+	}
+
+	function convertBucketsFormat() {
+		if (!canConvert()) {
+			// Try to refresh mode info, then re-check
+			loadModeInfo();
+			if (!canConvert()) {
+				error = 'Mode cost unknown — cannot convert formats';
+				return;
+			}
+		}
+
+		const cost = modeInfo!.cost;
+		if (inputFormat === 'absolute') {
+			// Convert absolute -> normalized (divide by cost)
+			buckets = buckets.map(b => ({ ...b, min_payout: +(b.min_payout / cost), max_payout: +(b.max_payout / cost) }));
+			inputFormat = 'normalized';
+		} else {
+			// Convert normalized -> absolute (multiply by cost)
+			buckets = buckets.map(b => ({ ...b, min_payout: +(b.min_payout * cost), max_payout: +(b.max_payout * cost) }));
+			inputFormat = 'absolute';
+		}
+		// Clear any prior errors
+		error = null;
+	}
 
 	// Reload mode info when mode changes
 	$effect(() => {
@@ -238,14 +275,27 @@
 		result = null;
 
 		try {
-			// Generate names before sending
-			const bucketsWithNames = buckets.map((b, i) => ({ ...b, name: `bucket_${i}` }));
-			const response = await api.bucketOptimize(mode, {
-				target_rtp: targetRtp,
-				buckets: bucketsWithNames,
-				save_to_file: saveToFile,
-				create_backup: createBackup
-			});
+				// Generate names and ensure buckets are normalized for the backend.
+				// Backend expects normalized ranges (units where 1.0 == mode cost).
+				const bucketsWithNames = buckets.map((b, i) => {
+					let min = b.min_payout;
+					let max = b.max_payout;
+					// If user entered absolute values, convert to normalized using mode cost.
+					if (inputFormat === 'absolute' && modeInfo?.cost && modeInfo.cost > 0) {
+						const cost = modeInfo.cost;
+						min = +(min / cost);
+						max = +(max / cost);
+					}
+					// If user selected 'normalized', we trust the inputs and send as-is.
+					return { ...b, name: `bucket_${i}`, min_payout: min, max_payout: max };
+				});
+
+				const response = await api.bucketOptimize(mode, {
+					target_rtp: targetRtp,
+					buckets: bucketsWithNames,
+					save_to_file: saveToFile,
+					create_backup: createBackup
+				});
 			result = response;
 			onOptimize?.(response);
 		} catch (e) {
@@ -306,6 +356,8 @@
 		if (fromShortConfig(config.b64_config)) {
 			selectedProfile = config.profile;
 			showProfiles = false;
+			// Profiles are normalized by default; ensure the UI reflects that
+			inputFormat = 'normalized';
 			error = null;
 		} else {
 			error = 'Failed to apply profile config';
@@ -332,26 +384,61 @@
 </script>
 
 <div class="space-y-4">
-	<!-- Bonus Mode Info Banner -->
-	{#if modeInfo?.is_bonus_mode}
-		<div class="px-4 py-3 rounded-xl bg-violet-500/10 border border-violet-500/30">
-			<div class="flex items-center gap-2 mb-2">
-				<svg class="w-4 h-4 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-					<path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-				</svg>
-				<span class="text-sm font-mono text-violet-400">BONUS MODE</span>
-				<span class="px-2 py-0.5 text-xs font-mono bg-violet-500/20 text-violet-300 rounded">Cost: {modeInfo.cost}x</span>
-			</div>
-			<div class="text-xs font-mono text-violet-200/70 space-y-1">
-				<p>Payouts normalized by cost. Bucket ranges = <span class="text-violet-300">absolute / {modeInfo.cost}</span></p>
-				<div class="flex gap-4 mt-2 text-violet-300/90">
-					<span><span class="text-violet-400">{modeInfo.cost}x</span> abs = <span class="text-emerald-400">1.0x</span> norm</span>
-					<span><span class="text-violet-400">{modeInfo.cost * 5}x</span> abs = <span class="text-emerald-400">5.0x</span> norm</span>
-					<span><span class="text-violet-400">{modeInfo.cost * 100}x</span> abs = <span class="text-emerald-400">100x</span> norm</span>
-				</div>
-			</div>
+	<!-- Bonus Mode / Units Banner -->
+{#if modeInfo?.is_bonus_mode}
+	<div class="px-4 py-3 rounded-xl bg-violet-500/10 border border-violet-500/30">
+		<div class="flex items-center gap-2 mb-2">
+			<svg class="w-4 h-4 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+				<path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+			</svg>
+			<span class="text-sm font-mono text-violet-400">BONUS MODE</span>
+			<span class="px-2 py-0.5 text-xs font-mono bg-violet-500/20 text-violet-300 rounded">Cost: {modeInfo.cost}x</span>
+
+			<!-- Input format selector + convert button -->
+			<span class="ml-auto flex items-center gap-2">
+				<span class="text-xs font-mono text-violet-300/80">Bucket ranges:</span>
+				<select
+					bind:value={inputFormat}
+					class="bg-[var(--color-graphite)] border border-white/10 rounded px-2 py-1 text-xs font-mono text-[var(--color-light)] focus:outline-none"
+					aria-label="Bucket range units"
+					title="Choose how you want to type bucket Min/Max values"
+				>
+					<option value="absolute">Absolute (x)</option>
+					<option value="normalized">Normalized (x / cost)</option>
+				</select>
+
+				<button
+					class="p-1 rounded text-xs bg-[var(--color-slate)]/20 text-[var(--color-mist)] hover:bg-[var(--color-slate)]/30 transition-colors"
+					onclick={convertBucketsFormat}
+					title="Convert all current bucket Min/Max values to the other unit using the mode cost"
+					aria-label="Convert bucket values between absolute and normalized"
+				>
+					<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M7 7h10M7 7l3 3M7 7l3-3M17 17H7M17 17l-3-3M17 17l-3 3" />
+					</svg>
+				</button>
+			</span>
 		</div>
-	{/if}
+
+		<div class="text-xs font-mono text-violet-200/70 space-y-2">
+			<p>
+				In bonus modes, the optimizer uses <span class="text-violet-300">normalized</span> payouts where
+				<span class="text-emerald-400">1.0x</span> means “one mode cost”.
+				If you select <span class="text-violet-300">Absolute</span> ranges, they are converted automatically before optimizing.
+			</p>
+
+			<div class="space-y-1">
+				<p><span class="text-violet-300">Absolute</span>: type the multipliers exactly as shown in your distribution/payout table (e.g. 500x = 500x).</p>
+				<p><span class="text-violet-300">Normalized</span>: type optimizer units (absolute ÷ cost).</p>
+			</div>
+
+			<p class="text-violet-200/60">
+				The swap button converts the current bucket values to quickly view and edit buckets in the other unit and switches the selected range unit (Absolute ↔ Normalized) so everything stays consistent.
+			</p>
+		</div>
+	</div>
+{/if}
+
 
 	<!-- Header: RTP + Config buttons -->
 	<div class="flex items-center gap-3 p-3 rounded-xl bg-[var(--color-graphite)]/50 border border-white/[0.03]">
