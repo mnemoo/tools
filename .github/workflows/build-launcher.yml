@@ -77,9 +77,6 @@ jobs:
           - os: macos-14
             goos: darwin
             goarch: arm64
-          - os: macos-13
-            goos: darwin
-            goarch: amd64
           - os: ubuntu-22.04
             goos: linux
             goarch: amd64
