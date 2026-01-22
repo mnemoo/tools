@@ -16,16 +16,17 @@
 	let forceLoading = $state<number | null>(null);
 	let forceMessage = $state<{ simId: number; message: string } | null>(null);
 
-	// Track which bucket is expanded (only one at a time)
-	let expandedBucket = $state<string | null>(null);
+	// Track which buckets are expanded (allow multiple open)
+	let expandedBuckets = $state<string[]>([]);
 
-	let currentData = $state<{
+	// currentData keyed by bucket key so multiple buckets can be open
+	let currentData = $state<Record<string, {
 		items: DistributionItem[];
 		total: number;
 		loading: boolean;
 		hasMore: boolean;
 		error: string | null;
-	} | null>(null);
+	}> >({});
 
 	// Sort buckets by range_end descending (biggest first)
 	let sortedBuckets = $derived(() => {
@@ -41,9 +42,9 @@
 	// Set first bucket as expanded by default (wincap)
 	$effect(() => {
 		const sorted = sortedBuckets();
-		if (sorted.length > 0 && expandedBucket === null) {
+		if (sorted.length > 0 && expandedBuckets.length === 0) {
 			const key = getBucketKey(sorted[0]);
-			expandedBucket = key;
+			expandedBuckets = [key];
 			loadBucketData(sorted[0], 0);
 		}
 	});
@@ -52,23 +53,24 @@
 	$effect(() => {
 		// Track mode to reset state when it changes
 		const _ = mode;
-		expandedBucket = null;
-		currentData = null;
+		expandedBuckets = [];
+		currentData = {};
 	});
 
 	// Load bucket data from API - always fresh, no frontend cache
 	async function loadBucketData(bucket: PayoutBucket, offset: number) {
+		const key = getBucketKey(bucket);
 		if (offset === 0) {
-			// Fresh load
-			currentData = {
+			// Fresh load for this bucket
+			currentData = { ...currentData, [key]: {
 				items: [],
 				total: 0,
 				loading: true,
 				hasMore: false,
 				error: null
-			};
-		} else if (currentData) {
-			currentData.loading = true;
+			} };
+		} else if (currentData[key]) {
+			currentData = { ...currentData, [key]: { ...currentData[key], loading: true } };
 		}
 
 		try {
@@ -80,32 +82,37 @@
 				ITEMS_PER_PAGE
 			);
 
-			currentData = {
-				items: offset === 0 ? response.items : [...(currentData?.items ?? []), ...response.items],
+			const prev = currentData[key]?.items ?? [];
+			currentData = { ...currentData, [key]: {
+				items: offset === 0 ? response.items : [...prev, ...response.items],
 				total: response.total,
 				loading: false,
 				hasMore: response.has_more,
 				error: null
-			};
+			} };
 		} catch (e) {
-			currentData = {
-				items: currentData?.items ?? [],
-				total: currentData?.total ?? 0,
+			currentData = { ...currentData, [key]: {
+				items: currentData[key]?.items ?? [],
+				total: currentData[key]?.total ?? 0,
 				loading: false,
 				hasMore: false,
 				error: e instanceof Error ? e.message : 'Failed to load'
-			};
+			} };
 		}
 	}
 
 	function toggleBucket(bucket: PayoutBucket) {
 		const key = getBucketKey(bucket);
-
-		if (expandedBucket === key) {
-			expandedBucket = null;
-			currentData = null;
+		const idx = expandedBuckets.indexOf(key);
+		if (idx >= 0) {
+			// collapse
+			expandedBuckets = expandedBuckets.filter(k => k !== key);
+			const copy = { ...currentData };
+			delete copy[key];
+			currentData = copy;
 		} else {
-			expandedBucket = key;
+			// expand
+			expandedBuckets = [...expandedBuckets, key];
 			// Always load fresh data when opening bucket
 			loadBucketData(bucket, 0);
 		}
@@ -113,8 +120,10 @@
 
 	// Load more items for current bucket (pagination only)
 	function loadMore(bucket: PayoutBucket) {
-		if (currentData && !currentData.loading && currentData.hasMore) {
-			loadBucketData(bucket, currentData.items.length);
+		const key = getBucketKey(bucket);
+		const data = currentData[key];
+		if (data && !data.loading && data.hasMore) {
+			loadBucketData(bucket, data.items.length);
 		}
 	}
 
@@ -264,7 +273,8 @@
 		<div class="space-y-2">
 			{#each sortedBuckets() as bucket}
 				{@const key = getBucketKey(bucket)}
-				{@const isExpanded = expandedBucket === key}
+				{@const isExpanded = expandedBuckets.includes(key)}
+				{@const data = currentData[key]}
 				<div class="rounded-xl border border-slate-700/50 overflow-hidden bg-slate-800/30">
 					<!-- Accordion Header -->
 					<button
@@ -306,19 +316,19 @@
 					<!-- Accordion Content -->
 					{#if isExpanded}
 						<div class="border-t border-slate-700/50">
-							{#if currentData?.loading && currentData.items.length === 0}
+							{#if data?.loading && data.items.length === 0}
 								<!-- Initial loading -->
 								<div class="py-8 text-center">
 									<div class="inline-block w-6 h-6 border-2 border-[var(--color-cyan)] border-t-transparent rounded-full animate-spin"></div>
 									<p class="text-xs font-mono text-[var(--color-mist)] mt-2">Loading...</p>
 								</div>
-							{:else if currentData?.error}
+							{:else if data?.error}
 								<!-- Error -->
-								<div class="py-8 text-center text-red-400 text-sm font-mono">{currentData.error}</div>
-							{:else if currentData?.items.length === 0}
+								<div class="py-8 text-center text-red-400 text-sm font-mono">{data?.error}</div>
+							{:else if data?.items.length === 0}
 								<!-- No items -->
 								<div class="py-8 text-center text-slate-500 text-sm">No payouts in this range</div>
-							{:else if currentData}
+							{:else if data}
 								<!-- Items table -->
 								<div class="max-h-[400px] overflow-auto">
 									<table class="w-full">
@@ -332,7 +342,7 @@
 											</tr>
 										</thead>
 										<tbody class="text-sm">
-											{#each currentData.items as item, i}
+											{#each data.items as item, i}
 												<tr class="border-t border-slate-700/30 hover:bg-slate-700/30 transition-colors {i % 2 === 0 ? 'bg-slate-800/20' : ''}">
 													<td class="px-4 py-2">
 														<span class="font-medium text-white font-mono">{formatMultiplier(item.payout)}</span>
@@ -387,15 +397,15 @@
 									</table>
 
 									<!-- Sentinel for lazy loading -->
-									{#if currentData.hasMore}
+									{#if data?.hasMore}
 										<div
 											use:observeSentinel={bucket}
 											class="py-3 text-center text-xs font-mono text-[var(--color-mist)]"
 										>
-											{#if currentData.loading}
+											{#if data?.loading}
 												<span class="inline-block w-4 h-4 border-2 border-[var(--color-cyan)] border-t-transparent rounded-full animate-spin mr-2"></span>
 											{/if}
-											Loading more... ({currentData.items.length} / {currentData.total})
+											Loading more... ({data?.items.length} / {data?.total})
 										</div>
 									{/if}
 								</div>

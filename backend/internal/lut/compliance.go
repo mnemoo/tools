@@ -99,7 +99,7 @@ func (c *ComplianceChecker) CheckMode(lut *stakergs.LookupTable) *ComplianceResu
 	// Calculate additional summary values
 	result.Summary.UniquePayouts = c.countUniquePayouts(lut)
 	result.Summary.MaxPayoutHitRate = c.calculateMaxPayoutHitRate(lut, totalWeight)
-	result.Summary.MostFrequentProb = c.calculateMostFrequentProbability(lut, totalWeight)
+	result.Summary.MostFrequentProb, _ = c.calculateMostFrequentProbability(lut, totalWeight)
 
 	// Run all checks
 	result.Checks = append(result.Checks, c.checkRTPRange(stats))
@@ -538,7 +538,7 @@ func (c *ComplianceChecker) checkSimulationDiversity(lut *stakergs.LookupTable, 
 	// With 100,000 simulations, a single result shouldn't exceed ~1% probability
 	maxSingleProb := 0.01 // 1%
 
-	mostFreqProb := c.calculateMostFrequentProbability(lut, totalWeight)
+	mostFreqProb, zeroProb := c.calculateMostFrequentProbability(lut, totalWeight)
 
 	check := ComplianceCheck{
 		ID:          CheckSimulationDiversity,
@@ -553,7 +553,7 @@ func (c *ComplianceChecker) checkSimulationDiversity(lut *stakergs.LookupTable, 
 		check.Passed = true
 	} else {
 		check.Passed = false
-		check.Reason = fmt.Sprintf("Most frequent outcome has %.2f%% probability, which may cause repetitive results", mostFreqProb*100)
+		check.Reason = fmt.Sprintf("Most frequent outcome has %.2f%% probability, which may cause repetitive results (info: loss %.2f%%)", mostFreqProb*100, zeroProb*100)
 	}
 
 	return check
@@ -631,24 +631,53 @@ func (c *ComplianceChecker) calculateMaxPayoutHitRate(lut *stakergs.LookupTable,
 	return round4(float64(maxWeight) / float64(totalWeight))
 }
 
-func (c *ComplianceChecker) calculateMostFrequentProbability(lut *stakergs.LookupTable, totalWeight uint64) float64 {
-	// Group by payout and find most frequent
-	payoutWeights := make(map[uint]uint64)
-	for _, o := range lut.Outcomes {
-		payoutWeights[o.Payout] += o.Weight
+func (c *ComplianceChecker) calculateMostFrequentProbability(lut *stakergs.LookupTable, totalWeight uint64) (float64, float64) {
+	if totalWeight == 0 {
+		return 0, 0
 	}
 
-	var maxWeight uint64
-	for _, w := range payoutWeights {
-		if w > maxWeight {
-			maxWeight = w
+	// Aggregate weights per payout while tracking top/second and zero payout weight.
+	payoutWeights := make(map[uint]uint64, len(lut.Outcomes))
+	var topWeight, secondWeight uint64
+	var topPayout uint
+	var zeroWeight uint64
+
+	for _, o := range lut.Outcomes {
+		p := o.Payout
+		w := payoutWeights[p] + o.Weight
+		payoutWeights[p] = w
+
+		if p == 0 {
+			zeroWeight = w
+		}
+
+		if p == topPayout {
+			topWeight = w
+		} else if w > topWeight {
+			secondWeight = topWeight
+			topWeight = w
+			topPayout = p
+		} else if w > secondWeight {
+			secondWeight = w
 		}
 	}
 
-	if totalWeight == 0 {
-		return 0
+	var chosen uint64
+	if topPayout == 0 {
+		chosen = secondWeight
+	} else {
+		chosen = topWeight
 	}
-	return round4(float64(maxWeight) / float64(totalWeight))
+
+	var mostFreqProb, zeroProb float64
+	if chosen > 0 {
+		mostFreqProb = round4(float64(chosen) / float64(totalWeight))
+	}
+	if zeroWeight > 0 {
+		zeroProb = round4(float64(zeroWeight) / float64(totalWeight))
+	}
+
+	return mostFreqProb, zeroProb
 }
 
 func formatLargeNumber(n float64) string {
