@@ -127,11 +127,6 @@ jobs:
             goarch: arm64
             platform: darwin/arm64
             artifact: mtools-launcher-darwin-arm64.app.zip
-          - os: macos-13
-            goos: darwin
-            goarch: amd64
-            platform: darwin/amd64
-            artifact: mtools-launcher-darwin-amd64.app.zip
           - os: ubuntu-22.04
             goos: linux
             goarch: amd64
