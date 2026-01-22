@@ -115,7 +115,8 @@ func (o *BruteForceOptimizer) OptimizeTable(table *stakergs.LookupTable) (*Brute
 	warnings = append(warnings, probWarnings...)
 
 	// Calculate initial weights using the base algorithm
-	newWeights, bucketResults, lossResult := baseOptimizer.calculateWeights(payouts, assignments, lossIndices)
+	newWeights, bucketResults, lossResult, weightWarnings := baseOptimizer.calculateWeights(payouts, assignments, lossIndices)
+	warnings = append(warnings, weightWarnings...)
 
 	// Send initial progress
 	o.sendProgress("init", 0, calculateRTPFromWeights(newWeights, payouts))
