@@ -83,7 +83,6 @@ npm install -g pnpm
 cd backend
 go run ./cmd -library /path/to/library
 # Runs on http://localhost:7754
-```
 
 # Frontend (separate terminal)
 cd frontend
