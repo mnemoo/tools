@@ -1,0 +1,69 @@
+{
+    "app": {
+        "title": "Mnemoo Tools",
+        "backend": "백엔드",
+        "frontend": "프론트엔드"
+    },
+    "buttons": {
+        "startAll": "모두 시작",
+        "startAllServices": "모든 서비스 시작",
+        "stopAll": "모두 중지",
+        "stop": "중지",
+        "restart": "재시작",
+        "openBrowser": "브라우저에서 열기",
+        "reload": "새로고침",
+        "changeDir": "디렉토리 변경",
+        "killAll": "모두 종료",
+        "save": "저장",
+        "cancel": "취소",
+        "browse": "찾아보기",
+        "clear": "지우기",
+        "selectFolder": "폴더 선택"
+    },
+    "settings": {
+        "title": "설정",
+        "libraryPath": "라이브러리 경로",
+        "frontendPort": "프론트엔드 포트",
+        "language": "언어",
+        "autoLoadBooks": "자동 북 로드",
+        "autoLoadBooksLong": "시작 시 이벤트 북 로드",
+        "autoLoadBooksHint": "비활성화하면 높은 CPU 사용량을 방지하기 위해 북이 자동으로 로드되지 않습니다. 프론트엔드에서 수동으로 로드를 시작할 수 있습니다.",
+        "autoReloadLUT": "자동 LUT 다시 로드",
+        "dependencies": "종속성"
+    },
+    "logs": {
+        "title": "로그",
+        "noLogs": "아직 로그가 없습니다. 출력을 보려면 서비스를 시작하세요."
+    },
+    "welcome": {
+        "title": "Mnemoo Tools에 오신 것을 환영합니다",
+        "description": "Mnemoo Tools를 사용하려면 서비스를 시작하세요.",
+        "selectFolder": "먼저 설정에서 라이브러리 폴더를 선택하세요."
+    },
+    "status": {
+        "running": "실행 중",
+        "stopped": "중지됨",
+        "starting": "시작 중...",
+        "error": "오류"
+    },
+    "errors": {
+        "portsInUse": "사용 중인 포트:",
+        "libraryNotSet": "라이브러리 경로가 설정되지 않았습니다."
+    },
+    "languages": {
+        "en": "English",
+        "ru": "Русский",
+        "es": "Español",
+        "zh": "中文",
+        "fr": "Français",
+        "it": "Italiano",
+        "de": "Deutsch",
+        "ko": "한국어",
+        "pt": "Português",
+        "el": "Ελληνικά",
+        "tr": "Türkçe",
+        "vi": "Tiếng Việt",
+        "th": "ไทย",
+        "fi": "Suomi"
+    }
+}

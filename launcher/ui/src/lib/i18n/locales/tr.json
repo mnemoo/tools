@@ -1,0 +1,69 @@
+{
+    "app": {
+        "title": "Mnemoo Tools",
+        "backend": "Backend",
+        "frontend": "Frontend"
+    },
+    "buttons": {
+        "startAll": "Tümünü başlat",
+        "startAllServices": "Tüm servisleri başlat",
+        "stopAll": "Tümünü durdur",
+        "stop": "Durdur",
+        "restart": "Yeniden başlat",
+        "openBrowser": "Tarayıcıda aç",
+        "reload": "Yenile",
+        "changeDir": "Dizini değiştir",
+        "killAll": "Tümünü sonlandır",
+        "save": "Kaydet",
+        "cancel": "İptal",
+        "browse": "Gözat",
+        "clear": "Temizle",
+        "selectFolder": "Klasör seç"
+    },
+    "settings": {
+        "title": "Ayarlar",
+        "libraryPath": "Kütüphane yolu",
+        "frontendPort": "Frontend portu",
+        "language": "Dil",
+        "autoLoadBooks": "Kitapları otomatik yükle",
+        "autoLoadBooksLong": "Başlangıçta olay kitaplarını yükle",
+        "autoLoadBooksHint": "Devre dışı bırakıldığında, yüksek CPU kullanımını önlemek için kitaplar otomatik olarak yüklenmez. Yüklemeyi frontend'den manuel olarak başlatabilirsiniz.",
+        "autoReloadLUT": "LUT'u otomatik yeniden yükle",
+        "dependencies": "Bağımlılıklar"
+    },
+    "logs": {
+        "title": "Günlükler",
+        "noLogs": "Henüz günlük yok. Çıktıyı görmek için servisleri başlatın."
+    },
+    "welcome": {
+        "title": "Mnemoo Tools'a Hoş Geldiniz",
+        "description": "Mnemoo Tools'u kullanmaya başlamak için servisleri başlatın.",
+        "selectFolder": "Önce ayarlarda kütüphane klasörünüzü seçin."
+    },
+    "status": {
+        "running": "Çalışıyor",
+        "stopped": "Durdu",
+        "starting": "Başlatılıyor...",
+        "error": "Hata"
+    },
+    "errors": {
+        "portsInUse": "Kullanılan portlar:",
+        "libraryNotSet": "Kütüphane yolu ayarlanmadı."
+    },
+    "languages": {
+        "en": "English",
+        "ru": "Русский",
+        "es": "Español",
+        "zh": "中文",
+        "fr": "Français",
+        "it": "Italiano",
+        "de": "Deutsch",
+        "ko": "한국어",
+        "pt": "Português",
+        "el": "Ελληνικά",
+        "tr": "Türkçe",
+        "vi": "Tiếng Việt",
+        "th": "ไทย",
+        "fi": "Suomi"
+    }
+}

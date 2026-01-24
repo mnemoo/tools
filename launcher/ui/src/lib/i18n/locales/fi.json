@@ -1,0 +1,69 @@
+{
+    "app": {
+        "title": "Mnemoo Tools",
+        "backend": "Backend",
+        "frontend": "Frontend"
+    },
+    "buttons": {
+        "startAll": "Käynnistä kaikki",
+        "startAllServices": "Käynnistä kaikki palvelut",
+        "stopAll": "Pysäytä kaikki",
+        "stop": "Pysäytä",
+        "restart": "Käynnistä uudelleen",
+        "openBrowser": "Avaa selaimessa",
+        "reload": "Lataa uudelleen",
+        "changeDir": "Vaihda hakemisto",
+        "killAll": "Lopeta kaikki",
+        "save": "Tallenna",
+        "cancel": "Peruuta",
+        "browse": "Selaa",
+        "clear": "Tyhjennä",
+        "selectFolder": "Valitse kansio"
+    },
+    "settings": {
+        "title": "Asetukset",
+        "libraryPath": "Kirjaston polku",
+        "frontendPort": "Frontend-portti",
+        "language": "Kieli",
+        "autoLoadBooks": "Lataa kirjat automaattisesti",
+        "autoLoadBooksLong": "Lataa tapahtumakirjat käynnistyksessä",
+        "autoLoadBooksHint": "Kun poistettu käytöstä, kirjoja ei ladata automaattisesti korkean suorittimen käytön estämiseksi. Voit aloittaa lataamisen manuaalisesti frontendistä.",
+        "autoReloadLUT": "Lataa LUT automaattisesti uudelleen",
+        "dependencies": "Riippuvuudet"
+    },
+    "logs": {
+        "title": "Lokit",
+        "noLogs": "Ei lokeja vielä. Käynnistä palvelut nähdäksesi tulosteen."
+    },
+    "welcome": {
+        "title": "Tervetuloa Mnemoo Toolsiin",
+        "description": "Käynnistä palvelut aloittaaksesi Mnemoo Toolsin käytön.",
+        "selectFolder": "Valitse ensin kirjastokansio asetuksista."
+    },
+    "status": {
+        "running": "Käynnissä",
+        "stopped": "Pysäytetty",
+        "starting": "Käynnistyy...",
+        "error": "Virhe"
+    },
+    "errors": {
+        "portsInUse": "Portit käytössä:",
+        "libraryNotSet": "Kirjaston polkua ei ole asetettu."
+    },
+    "languages": {
+        "en": "English",
+        "ru": "Русский",
+        "es": "Español",
+        "zh": "中文",
+        "fr": "Français",
+        "it": "Italiano",
+        "de": "Deutsch",
+        "ko": "한국어",
+        "pt": "Português",
+        "el": "Ελληνικά",
+        "tr": "Türkçe",
+        "vi": "Tiếng Việt",
+        "th": "ไทย",
+        "fi": "Suomi"
+    }
+}

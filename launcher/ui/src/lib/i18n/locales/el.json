@@ -1,0 +1,69 @@
+{
+    "app": {
+        "title": "Mnemoo Tools",
+        "backend": "Backend",
+        "frontend": "Frontend"
+    },
+    "buttons": {
+        "startAll": "Εκκίνηση όλων",
+        "startAllServices": "Εκκίνηση όλων των υπηρεσιών",
+        "stopAll": "Διακοπή όλων",
+        "stop": "Διακοπή",
+        "restart": "Επανεκκίνηση",
+        "openBrowser": "Άνοιγμα στον browser",
+        "reload": "Επαναφόρτωση",
+        "changeDir": "Αλλαγή καταλόγου",
+        "killAll": "Τερματισμός όλων",
+        "save": "Αποθήκευση",
+        "cancel": "Ακύρωση",
+        "browse": "Περιήγηση",
+        "clear": "Καθαρισμός",
+        "selectFolder": "Επιλογή φακέλου"
+    },
+    "settings": {
+        "title": "Ρυθμίσεις",
+        "libraryPath": "Διαδρομή βιβλιοθήκης",
+        "frontendPort": "Θύρα frontend",
+        "language": "Γλώσσα",
+        "autoLoadBooks": "Αυτόματη φόρτωση βιβλίων",
+        "autoLoadBooksLong": "Φόρτωση βιβλίων γεγονότων κατά την εκκίνηση",
+        "autoLoadBooksHint": "Όταν απενεργοποιηθεί, τα βιβλία δεν θα φορτώνονται αυτόματα για να αποφευχθεί υψηλή χρήση CPU. Μπορείτε να ξεκινήσετε τη φόρτωση χειροκίνητα από το frontend.",
+        "autoReloadLUT": "Αυτόματη επαναφόρτωση LUT",
+        "dependencies": "Εξαρτήσεις"
+    },
+    "logs": {
+        "title": "Αρχεία καταγραφής",
+        "noLogs": "Δεν υπάρχουν ακόμα αρχεία καταγραφής. Ξεκινήστε τις υπηρεσίες για να δείτε την έξοδο."
+    },
+    "welcome": {
+        "title": "Καλώς ήρθατε στο Mnemoo Tools",
+        "description": "Ξεκινήστε τις υπηρεσίες για να χρησιμοποιήσετε το Mnemoo Tools.",
+        "selectFolder": "Πρώτα, επιλέξτε τον φάκελο της βιβλιοθήκης σας στις ρυθμίσεις."
+    },
+    "status": {
+        "running": "Εκτελείται",
+        "stopped": "Σταμάτησε",
+        "starting": "Εκκίνηση...",
+        "error": "Σφάλμα"
+    },
+    "errors": {
+        "portsInUse": "Θύρες σε χρήση:",
+        "libraryNotSet": "Η διαδρομή βιβλιοθήκης δεν έχει οριστεί."
+    },
+    "languages": {
+        "en": "English",
+        "ru": "Русский",
+        "es": "Español",
+        "zh": "中文",
+        "fr": "Français",
+        "it": "Italiano",
+        "de": "Deutsch",
+        "ko": "한국어",
+        "pt": "Português",
+        "el": "Ελληνικά",
+        "tr": "Türkçe",
+        "vi": "Tiếng Việt",
+        "th": "ไทย",
+        "fi": "Suomi"
+    }
+}

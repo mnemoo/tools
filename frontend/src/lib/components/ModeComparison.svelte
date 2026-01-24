@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { CompareItem } from '$lib/api';
+	import { _ } from '$lib/i18n';
 
 	interface Props {
 		items: CompareItem[];
@@ -40,23 +41,23 @@
 <div>
 	<div class="flex items-center gap-3 mb-6">
 		<div class="w-1 h-5 bg-[var(--color-violet)] rounded-full"></div>
-		<h3 class="font-display text-lg text-[var(--color-light)] tracking-wider">MODE COMPARISON</h3>
+		<h3 class="font-display text-lg text-[var(--color-light)] tracking-wider">{$_('modeComparison.title')}</h3>
 	</div>
 
 	{#if items.length === 0}
-		<div class="py-8 text-center text-slate-500">No modes to compare</div>
+		<div class="py-8 text-center text-slate-500">{$_('status.noData')}</div>
 	{:else}
 		<div class="overflow-x-auto">
 			<table class="w-full">
 				<thead>
 					<tr class="text-left text-xs uppercase text-slate-500 tracking-wider">
-						<th class="pb-3 font-medium">Mode</th>
-						<th class="pb-3 text-right font-medium">RTP</th>
-						<th class="pb-3 text-right font-medium">Hit Rate</th>
-						<th class="pb-3 text-right font-medium">Max Payout</th>
-						<th class="pb-3 text-right font-medium">Mean</th>
-						<th class="pb-3 text-right font-medium">Median</th>
-						<th class="pb-3 text-right font-medium">Volatility</th>
+						<th class="pb-3 font-medium">{$_('table.mode')}</th>
+						<th class="pb-3 text-right font-medium">{$_('metrics.rtp')}</th>
+						<th class="pb-3 text-right font-medium">{$_('metrics.hitRate')}</th>
+						<th class="pb-3 text-right font-medium">{$_('metrics.maxWin')}</th>
+						<th class="pb-3 text-right font-medium">{$_('metrics.mean')}</th>
+						<th class="pb-3 text-right font-medium">{$_('metrics.median')}</th>
+						<th class="pb-3 text-right font-medium">{$_('metrics.volatility')}</th>
 					</tr>
 				</thead>
 				<tbody class="text-sm">

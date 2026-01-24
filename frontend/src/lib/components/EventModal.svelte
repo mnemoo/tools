@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { api, type EventInfo, type LGSSessionSummary } from '$lib/api';
 	import { loadGameSettings, openGame as openGameHelper, openReplay } from '$lib/openGame';
+	import { _ } from '$lib/i18n';
 
 	let {
 		mode,
@@ -171,7 +172,7 @@
 		<!-- Header -->
 		<div class="flex items-center justify-between border-b border-gray-700 px-6 py-4">
 			<div>
-				<h2 class="text-lg font-semibold text-white">Event Details</h2>
+				<h2 class="text-lg font-semibold text-white">{$_('events.eventDetails')}</h2>
 				<p class="text-sm text-gray-400">
 					Mode: {mode} | SimID: {simId}
 				</p>
@@ -204,19 +205,19 @@
 				<!-- Statistics -->
 				<div class="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
 					<div class="rounded-lg bg-gray-700/50 p-4">
-						<div class="text-xs text-gray-400">Payout</div>
+						<div class="text-xs text-gray-400">{$_('events.payout')}</div>
 						<div class="mt-1 text-xl font-bold text-green-400">
 							{formatNumber(eventInfo.payout)}x
 						</div>
 					</div>
 					<div class="rounded-lg bg-gray-700/50 p-4">
-						<div class="text-xs text-gray-400">Weight</div>
+						<div class="text-xs text-gray-400">{$_('events.weight')}</div>
 						<div class="mt-1 text-xl font-bold text-white">
 							{formatNumber(eventInfo.weight)}
 						</div>
 					</div>
 					<div class="rounded-lg bg-gray-700/50 p-4">
-						<div class="text-xs text-gray-400">Odds</div>
+						<div class="text-xs text-gray-400">{$_('events.odds')}</div>
 						<div class="mt-1 text-xl font-bold text-purple-400">
 							{eventInfo.odds}
 						</div>
@@ -232,8 +233,8 @@
 								<path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
 							</svg>
 							<div>
-								<span class="text-sm font-semibold text-blue-400">REPLAY EVENT</span>
-								<p class="text-xs text-gray-400">Test your replay feature (opens game in new tab), setup in LGS tab</p>
+								<span class="text-sm font-semibold text-blue-400">{$_('events.replayEvent')}</span>
+								<p class="text-xs text-gray-400">{$_('events.replayDesc')}</p>
 							</div>
 						</div>
 						<button
@@ -246,13 +247,13 @@
 									<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
 									<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
 								</svg>
-								Opening...
+								{$_('common.opening')}
 							{:else}
 								<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 									<path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
 									<path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
 								</svg>
-								REPLAY
+								{$_('events.replay')}
 							{/if}
 						</button>
 					</div>
@@ -264,7 +265,7 @@
 						<svg class="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
 						</svg>
-						<span class="text-sm font-semibold text-amber-400">FORCE NEXT OUTCOME</span>
+						<span class="text-sm font-semibold text-amber-400">{$_('lgs.forceNextOutcome')}</span>
 					</div>
 					{#if sessions.length > 0}
 						<div class="flex items-center gap-3 flex-wrap">
@@ -282,9 +283,9 @@
 								class="px-4 py-2 rounded bg-amber-500 text-gray-900 font-semibold text-sm hover:bg-amber-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 							>
 								{#if forceLoading}
-									Setting...
+									{$_('common.setting')}
 								{:else}
-									FORCE OUTCOME
+									{$_('events.forceOutcome')}
 								{/if}
 							</button>
 							<button
@@ -298,12 +299,12 @@
 										<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
 										<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
 									</svg>
-									Opening...
+									{$_('common.opening')}
 								{:else}
 									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 										<path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
 									</svg>
-									FORCE & OPEN GAME
+									{$_('events.forceAndOpenGame')}
 								{/if}
 							</button>
 						</div>
@@ -323,39 +324,51 @@
 						{/if}
 					{:else}
 						<div class="text-sm text-gray-400">
-							No active LGS sessions. Start a game session first to force outcomes.
+							{$_('events.noLgsSessions')}
 						</div>
 					{/if}
 				</div>
 
 				<!-- Event JSON -->
-				{#if eventInfo.events_loaded && eventInfo.event}
+				{#if eventInfo.event}
 					<div>
-						<h3 class="mb-2 text-sm font-medium text-gray-300">Event JSON</h3>
+						<div class="mb-2 flex items-center gap-2">
+							<h3 class="text-sm font-medium text-gray-300">{$_('events.eventData')}</h3>
+							{#if eventInfo.lazy_load}
+								<span class="px-2 py-0.5 text-xs rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+									{$_('events.lazyLoaded')}
+								</span>
+							{:else if eventInfo.events_loaded}
+								<span class="px-2 py-0.5 text-xs rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">
+									{$_('events.fromCache')}
+								</span>
+							{/if}
+						</div>
 						<pre
 							class="max-h-96 overflow-auto rounded-lg bg-gray-900 p-4 text-sm text-gray-300">{JSON.stringify(eventInfo.event, null, 2)}</pre>
 					</div>
-				{:else if eventInfo.events_loaded && eventInfo.event_missing}
-					<div class="rounded-lg bg-yellow-900/30 p-6 text-center">
-						<p class="text-yellow-400">Event data not found in events file.</p>
-						<p class="mt-2 text-sm text-gray-400">
-							This sim_id exists in the LUT but has no corresponding event record.
+				{:else if eventInfo.no_events_file}
+					<div class="rounded-lg bg-gray-700/30 p-6 text-center">
+						<p class="text-gray-400">{$_('events.noEventsFile')}</p>
+						<p class="mt-2 text-sm text-gray-500">
+							{$_('events.noEventsFileDesc')}
 						</p>
+					</div>
+				{:else if eventInfo.event_missing}
+					<div class="rounded-lg bg-yellow-900/30 p-6 text-center">
+						<p class="text-yellow-400">{$_('events.notAvailable')}</p>
+						<p class="mt-2 text-sm text-gray-400">
+							{$_('events.notFoundDesc')}
+						</p>
+					</div>
+				{:else if eventInfo.error}
+					<div class="rounded-lg bg-red-900/30 p-6 text-center">
+						<p class="text-red-400">{$_('errors.loadFailed')}</p>
+						<p class="mt-2 text-sm text-gray-400">{eventInfo.error}</p>
 					</div>
 				{:else}
 					<div class="rounded-lg bg-gray-700/30 p-6 text-center">
-						<p class="mb-4 text-gray-400">Events file not loaded for this mode.</p>
-						<button
-							onclick={loadEventsFile}
-							disabled={loadingEvents}
-							class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-						>
-							{#if loadingEvents}
-								Loading...
-							{:else}
-								Load Events File
-							{/if}
-						</button>
+						<p class="text-gray-400">{$_('events.notAvailable')}</p>
 					</div>
 				{/if}
 			{/if}

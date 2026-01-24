@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { CrowdSimConfig, CrowdSimPresetInfo } from '$lib/api/types';
+	import { _ } from '$lib/i18n';
 
 	let {
 		config = $bindable<CrowdSimConfig>(),
@@ -28,13 +29,13 @@
 					<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
 				</svg>
 			</div>
-			<span class="font-mono text-base text-[var(--color-light)]">CONFIGURATION</span>
+			<span class="font-mono text-base text-[var(--color-light)]">{$_('crowdsim.configuration')}</span>
 		</div>
 
 		<!-- Presets -->
 		{#if presets.length > 0}
 			<div class="flex items-center gap-2">
-				<span class="text-sm font-mono text-[var(--color-mist)]">PRESETS</span>
+				<span class="text-sm font-mono text-[var(--color-mist)]">{$_('crowdsim.presets')}</span>
 				{#each presets as preset}
 					<button
 						class="px-3 py-1.5 rounded-lg text-sm font-mono bg-[var(--color-slate)]/30 text-[var(--color-mist)] hover:bg-[var(--color-cyan)]/20 hover:text-[var(--color-cyan)] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
@@ -55,7 +56,7 @@
 			<!-- Player Count -->
 			<div class="space-y-2">
 				<div class="flex items-center justify-between">
-					<label class="text-sm font-mono text-[var(--color-mist)]" for="player_count">PLAYERS</label>
+					<label class="text-sm font-mono text-[var(--color-mist)]" for="player_count">{$_('crowdsim.players')}</label>
 					<span class="text-base font-mono text-[var(--color-cyan)]">{config.player_count.toLocaleString()}</span>
 				</div>
 				<div class="relative">
@@ -78,7 +79,7 @@
 
 			<!-- Spins Per Session -->
 			<div class="space-y-2">
-				<label class="text-sm font-mono text-[var(--color-mist)]" for="spins_per_session">SPINS/SESSION</label>
+				<label class="text-sm font-mono text-[var(--color-mist)]" for="spins_per_session">{$_('crowdsim.spinsPerSession')}</label>
 				<input
 					type="number"
 					id="spins_per_session"
@@ -100,7 +101,7 @@
 
 			<!-- Initial Balance -->
 			<div class="space-y-2">
-				<label class="text-sm font-mono text-[var(--color-mist)]" for="initial_balance">INITIAL BALANCE</label>
+				<label class="text-sm font-mono text-[var(--color-mist)]" for="initial_balance">{$_('crowdsim.initialBalance')}</label>
 				<input
 					type="number"
 					id="initial_balance"
@@ -117,7 +118,7 @@
 
 			<!-- Big Win Threshold -->
 			<div class="space-y-2">
-				<label class="text-sm font-mono text-[var(--color-mist)]" for="big_win_threshold">BIG WIN THRESHOLD</label>
+				<label class="text-sm font-mono text-[var(--color-mist)]" for="big_win_threshold">{$_('crowdsim.bigWinThreshold')}</label>
 				<div class="relative">
 					<input
 						type="number"
@@ -137,7 +138,7 @@
 
 			<!-- Danger Threshold -->
 			<div class="space-y-2">
-				<label class="text-sm font-mono text-[var(--color-mist)]" for="danger_threshold">DANGER THRESHOLD</label>
+				<label class="text-sm font-mono text-[var(--color-mist)]" for="danger_threshold">{$_('crowdsim.dangerThreshold')}</label>
 				<div class="relative">
 					<input
 						type="number"
@@ -158,7 +159,7 @@
 
 			<!-- Workers -->
 			<div class="space-y-2">
-				<label class="text-sm font-mono text-[var(--color-mist)]" for="parallel_workers">PARALLEL WORKERS</label>
+				<label class="text-sm font-mono text-[var(--color-mist)]" for="parallel_workers">{$_('crowdsim.parallelWorkers')}</label>
 				<input
 					type="number"
 					id="parallel_workers"
@@ -189,7 +190,7 @@
 						<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
 					</svg>
 				</div>
-				<span class="text-sm font-mono text-[var(--color-mist)] group-hover:text-[var(--color-light)] transition-colors">CRYPTO RNG</span>
+				<span class="text-sm font-mono text-[var(--color-mist)] group-hover:text-[var(--color-light)] transition-colors">{$_('crowdsim.cryptoRng')}</span>
 			</label>
 
 			<label class="flex items-center gap-2 cursor-pointer group">
@@ -205,7 +206,7 @@
 						<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
 					</svg>
 				</div>
-				<span class="text-sm font-mono text-[var(--color-mist)] group-hover:text-[var(--color-light)] transition-colors">ECO MODE</span>
+				<span class="text-sm font-mono text-[var(--color-mist)] group-hover:text-[var(--color-light)] transition-colors">{$_('crowdsim.ecoMode')}</span>
 			</label>
 
 			<!-- Run Button -->
@@ -221,7 +222,7 @@
 					<path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
 					<path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
 				</svg>
-				RUN SIMULATION
+				{$_('crowdsim.runSimulation')}
 			</button>
 		</div>
 	</div>

@@ -1,6 +1,6 @@
 {
   "$schema": "https://wails.io/schemas/config.v2.json",
-  "name": "mtools-launcher",
+  "name": "Mnemoo Tools",
   "outputfilename": "mtools-launcher",
   "frontend:install": "pnpm install",
   "frontend:build": "pnpm run build",
@@ -10,6 +10,6 @@
   "wailsjsdir": "./ui/src/lib",
   "author": {
     "name": "Mnemoo",
-    "email": "dev@mnemoo.com"
+    "email": "not@exists.com"
   }
 }

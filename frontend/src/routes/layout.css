@@ -541,3 +541,42 @@ select:focus {
   color: var(--color-violet);
   border: 1px solid rgba(167, 139, 250, 0.2);
 }
+
+/* Compliance Indicator */
+.compliance-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.compliance-indicator.passed {
+  background: rgba(0, 230, 118, 0.15);
+  color: var(--color-emerald);
+  border: 1px solid rgba(0, 230, 118, 0.3);
+}
+
+.compliance-indicator.passed:hover {
+  background: rgba(0, 230, 118, 0.25);
+  border-color: rgba(0, 230, 118, 0.5);
+  transform: scale(1.1);
+  box-shadow: 0 0 8px rgba(0, 230, 118, 0.4);
+}
+
+.compliance-indicator.failed {
+  background: rgba(255, 107, 107, 0.15);
+  color: var(--color-coral);
+  border: 1px solid rgba(255, 107, 107, 0.3);
+}
+
+.compliance-indicator.failed:hover {
+  background: rgba(255, 107, 107, 0.25);
+  border-color: rgba(255, 107, 107, 0.5);
+  transform: scale(1.1);
+  box-shadow: 0 0 8px rgba(255, 107, 107, 0.4);
+}

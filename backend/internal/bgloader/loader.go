@@ -88,6 +88,28 @@ func NewBackgroundLoader(loader *lut.Loader, hub *ws.Hub) *BackgroundLoader {
 		progressInterval:      1000,                 // Update every 1000 lines
 	}
 	bl.priority.Store(int32(PriorityLow))
+
+	// Pre-initialize mode statuses with file sizes for memory estimation
+	// This allows memory estimate to be available before Start() is called
+	index := loader.GetIndex()
+	if index != nil {
+		for _, mode := range index.Modes {
+			if mode.Events != "" {
+				status := &ModeStatus{
+					Mode:       mode.Name,
+					EventsFile: mode.Events,
+					Status:     "pending",
+				}
+				// Get file size for memory estimation
+				filePath := filepath.Join(bl.baseDir, mode.Events)
+				if info, err := os.Stat(filePath); err == nil {
+					status.TotalBytes = info.Size()
+				}
+				bl.modeStatuses[mode.Name] = status
+			}
+		}
+	}
+
 	return bl
 }
 
@@ -105,20 +127,8 @@ func (bl *BackgroundLoader) Start() {
 		return
 	}
 
-	// Initialize status for all modes
-	bl.mu.Lock()
-	for _, mode := range index.Modes {
-		if mode.Events != "" {
-			bl.modeStatuses[mode.Name] = &ModeStatus{
-				Mode:       mode.Name,
-				EventsFile: mode.Events,
-				Status:     "pending",
-			}
-		}
-	}
-	bl.mu.Unlock()
-
-	// Start loading goroutine
+	// Mode statuses are already initialized in NewBackgroundLoader()
+	// Just start the loading goroutine
 	bl.wg.Add(1)
 	go bl.loadAllModes(index.Modes)
 }
@@ -211,13 +221,19 @@ func (bl *BackgroundLoader) ReloadMode(modeName string) error {
 	// Clear existing events for this mode
 	bl.loader.EventsLoader().ClearMode(modeName)
 
-	// Reset status
+	// Reset status with file size
 	bl.mu.Lock()
-	bl.modeStatuses[modeName] = &ModeStatus{
+	status := &ModeStatus{
 		Mode:       modeName,
 		EventsFile: modeConfig.Events,
 		Status:     "pending",
 	}
+	// Get file size for memory estimation
+	filePath := filepath.Join(bl.baseDir, modeConfig.Events)
+	if info, err := os.Stat(filePath); err == nil {
+		status.TotalBytes = info.Size()
+	}
+	bl.modeStatuses[modeName] = status
 	bl.mu.Unlock()
 
 	// Broadcast reload started for this mode

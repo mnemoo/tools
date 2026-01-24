@@ -1,0 +1,69 @@
+{
+    "app": {
+        "title": "Mnemoo Tools",
+        "backend": "Backend",
+        "frontend": "Frontend"
+    },
+    "buttons": {
+        "startAll": "Khởi động tất cả",
+        "startAllServices": "Khởi động tất cả dịch vụ",
+        "stopAll": "Dừng tất cả",
+        "stop": "Dừng",
+        "restart": "Khởi động lại",
+        "openBrowser": "Mở trong trình duyệt",
+        "reload": "Tải lại",
+        "changeDir": "Đổi thư mục",
+        "killAll": "Kết thúc tất cả",
+        "save": "Lưu",
+        "cancel": "Hủy",
+        "browse": "Duyệt",
+        "clear": "Xóa",
+        "selectFolder": "Chọn thư mục"
+    },
+    "settings": {
+        "title": "Cài đặt",
+        "libraryPath": "Đường dẫn thư viện",
+        "frontendPort": "Cổng frontend",
+        "language": "Ngôn ngữ",
+        "autoLoadBooks": "Tự động tải sách",
+        "autoLoadBooksLong": "Tải sách sự kiện khi khởi động",
+        "autoLoadBooksHint": "Khi tắt, sách sẽ không được tải tự động để tránh sử dụng CPU cao. Bạn có thể bắt đầu tải thủ công từ frontend.",
+        "autoReloadLUT": "Tự động tải lại LUT",
+        "dependencies": "Phụ thuộc"
+    },
+    "logs": {
+        "title": "Nhật ký",
+        "noLogs": "Chưa có nhật ký. Khởi động các dịch vụ để xem đầu ra."
+    },
+    "welcome": {
+        "title": "Chào mừng đến với Mnemoo Tools",
+        "description": "Khởi động các dịch vụ để bắt đầu sử dụng Mnemoo Tools.",
+        "selectFolder": "Trước tiên, chọn thư mục thư viện của bạn trong cài đặt."
+    },
+    "status": {
+        "running": "Đang chạy",
+        "stopped": "Đã dừng",
+        "starting": "Đang khởi động...",
+        "error": "Lỗi"
+    },
+    "errors": {
+        "portsInUse": "Cổng đang sử dụng:",
+        "libraryNotSet": "Đường dẫn thư viện chưa được đặt."
+    },
+    "languages": {
+        "en": "English",
+        "ru": "Русский",
+        "es": "Español",
+        "zh": "中文",
+        "fr": "Français",
+        "it": "Italiano",
+        "de": "Deutsch",
+        "ko": "한국어",
+        "pt": "Português",
+        "el": "Ελληνικά",
+        "tr": "Türkçe",
+        "vi": "Tiếng Việt",
+        "th": "ไทย",
+        "fi": "Suomi"
+    }
+}

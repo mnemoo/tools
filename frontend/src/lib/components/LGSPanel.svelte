@@ -2,6 +2,7 @@
 	import { api, type LGSSessionSummary, type LGSAggregateStats, type LGSSessionsResponse, type ModeSummary, type WSMessage, type LoaderModeStatus, type WSLoadingProgress } from '$lib/api';
 	import { CURRENCIES, LANGUAGES, loadGameSettings, saveGameSettings, getCurrencyDisplay, openGame as openGameHelper } from '$lib/openGame';
 	import BatchSimModal from './BatchSimModal.svelte';
+	import { _ } from '$lib/i18n';
 
 	const LGS_HTTPS_URL = 'https://localhost:7755';
 
@@ -138,35 +139,7 @@
 	let loaderPriority = $state<'low' | 'high'>('low');
 	let turboLoading = $state(false);
 
-	// Check if all books are loaded
-	let allBooksLoaded = $derived(() => {
-		const modeNames = modes.map(m => m.mode.toLowerCase());
-		if (modeNames.length === 0) return true;
-
-		for (const modeName of modeNames) {
-			const status = Object.entries(loaderModes).find(
-				([key]) => key.toLowerCase() === modeName
-			)?.[1];
-			if (!status || status.status !== 'complete') {
-				return false;
-			}
-		}
-		return true;
-	});
-
-	// Get loading progress for display
-	let loadingProgress = $derived(() => {
-		const progress: Array<{ mode: string; status: LoaderModeStatus }> = [];
-		for (const mode of modes) {
-			const status = Object.entries(loaderModes).find(
-				([key]) => key.toLowerCase() === mode.mode.toLowerCase()
-			)?.[1];
-			if (status) {
-				progress.push({ mode: mode.mode, status });
-			}
-		}
-		return progress;
-	});
+	// Note: Events are now lazy-loaded on demand, no need to wait for full loading
 
 	// Connect WebSocket for real-time updates
 	function connectWebSocket() {
@@ -485,9 +458,9 @@
 				</svg>
 			</div>
 			<div class="flex-1 min-w-0">
-				<h4 class="font-display text-sm text-amber-400 tracking-wider mb-1">HTTPS CERTIFICATE NOT TRUSTED</h4>
+				<h4 class="font-display text-sm text-amber-400 tracking-wider mb-1">{$_('lgs.certWarningTitle')}</h4>
 				<p class="text-sm text-[var(--color-light)]/70 mb-3">
-					LGS requires HTTPS with a self-signed certificate. To use LGS features, open the link below in your browser and trust the certificate.
+					{$_('lgs.certWarningDesc')}
 				</p>
 				<div class="flex flex-wrap items-center gap-3">
 					<button
@@ -497,143 +470,55 @@
 						<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
 						</svg>
-						OPEN {LGS_HTTPS_URL}
+						{$_('lgs.open')} {LGS_HTTPS_URL}
 					</button>
 					<button
 						onclick={recheckCertificate}
 						class="px-4 py-2 rounded-lg bg-[var(--color-slate)] text-[var(--color-light)] font-mono text-sm hover:bg-[var(--color-graphite)] transition-colors"
 					>
-						Recheck
+						{$_('buttons.recheck')}
 					</button>
 					<button
 						onclick={() => certBannerDismissed = true}
 						class="px-4 py-2 rounded-lg text-[var(--color-mist)] font-mono text-sm hover:text-[var(--color-light)] transition-colors"
 					>
-						Dismiss
+						{$_('buttons.dismiss')}
 					</button>
 				</div>
 			</div>
 		</div>
 	{/if}
 
-	<!-- Loading Overlay -->
-	{#if !allBooksLoaded()}
-		<div class="absolute inset-0 z-10 backdrop-blur-sm bg-[var(--color-void)]/70 rounded-2xl flex items-center justify-center">
-			<div class="bg-[var(--color-graphite)] rounded-2xl p-8 max-w-lg w-full mx-4 shadow-2xl border border-white/10">
-				<div class="flex items-center gap-3 mb-6">
-					<div class="w-8 h-8 rounded-full bg-[var(--color-cyan)]/20 flex items-center justify-center">
-						<svg class="w-4 h-4 text-[var(--color-cyan)] animate-spin" fill="none" viewBox="0 0 24 24">
-							<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-							<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-						</svg>
-					</div>
-					<div>
-						<h3 class="font-display text-lg text-[var(--color-light)] tracking-wider">LOADING BOOKS</h3>
-						<p class="text-sm font-mono text-[var(--color-mist)]">Events must be loaded before LGS can work</p>
-					</div>
-				</div>
-
-				<!-- Mode Progress -->
-				<div class="space-y-3 mb-6">
-					{#each loadingProgress() as { mode, status }}
-						<div>
-							<div class="flex items-center justify-between text-sm font-mono mb-1">
-								<span class="text-[var(--color-light)]">{mode}</span>
-								<span class={getStatusColor(status.status)}>
-									{#if status.status === 'complete'}
-										COMPLETE
-									{:else if status.status === 'loading'}
-										{status.percent_bytes.toFixed(1)}%
-									{:else if status.status === 'error'}
-										ERROR
-									{:else}
-										PENDING
-									{/if}
-								</span>
-							</div>
-							<div class="h-2 bg-[var(--color-slate)] rounded-full overflow-hidden">
-								<div
-									class="h-full transition-all duration-300 {status.status === 'complete' ? 'bg-emerald-500' : status.status === 'error' ? 'bg-red-500' : 'bg-[var(--color-cyan)]'}"
-									style="width: {status.status === 'complete' ? 100 : status.percent_bytes}%"
-								></div>
-							</div>
-							{#if status.status === 'loading' && status.current_line > 0}
-								<div class="text-sm font-mono text-[var(--color-mist)] mt-1">
-									{status.current_line.toLocaleString()} lines loaded
-								</div>
-							{/if}
-						</div>
-					{/each}
-				</div>
-
-				<!-- Turbo Button -->
-				<div class="flex items-center justify-between pt-4 border-t border-white/10">
-					<div class="text-sm font-mono text-[var(--color-mist)]">
-						Priority: <span class={loaderPriority === 'high' ? 'text-[var(--color-gold)]' : 'text-[var(--color-mist)]'}>
-							{loaderPriority === 'high' ? 'TURBO' : 'LOW'}
-						</span>
-					</div>
-					<button
-						onclick={toggleTurbo}
-						disabled={turboLoading}
-						class="px-4 py-2 rounded-lg font-mono font-semibold text-sm transition-colors disabled:opacity-50
-							{loaderPriority === 'high'
-								? 'bg-[var(--color-gold)] text-[var(--color-void)] hover:bg-[var(--color-gold)]/90'
-								: 'bg-[var(--color-slate)] text-[var(--color-light)] hover:bg-[var(--color-graphite)]'}"
-					>
-						{#if turboLoading}
-							...
-						{:else if loaderPriority === 'high'}
-							<span class="flex items-center gap-2">
-								<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-									<path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-								</svg>
-								TURBO ON
-							</span>
-						{:else}
-							<span class="flex items-center gap-2">
-								<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-									<path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-								</svg>
-								ENABLE TURBO
-							</span>
-						{/if}
-					</button>
-				</div>
-			</div>
-		</div>
-	{/if}
-
-	<div class="space-y-6 {!allBooksLoaded() ? 'opacity-30 pointer-events-none' : ''}">
+	<div class="space-y-6">
 		<!-- Aggregate Stats -->
 		{#if aggregate}
 			<div class="glass-panel rounded-2xl p-6">
 				<div class="flex items-center gap-3 mb-6">
 					<div class="w-1 h-5 bg-[var(--color-cyan)] rounded-full"></div>
-					<h3 class="font-display text-lg text-[var(--color-light)] tracking-wider">AGGREGATE STATS</h3>
+					<h3 class="font-display text-lg text-[var(--color-light)] tracking-wider">{$_('lgs.aggregateStats')}</h3>
 				</div>
 
 				<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
 					<div class="bg-[var(--color-graphite)]/50 rounded-xl p-4">
-						<div class="text-sm font-mono text-[var(--color-light)] mb-1">OVERALL RTP</div>
+						<div class="text-sm font-mono text-[var(--color-light)] mb-1">{$_('lgs.overallRtp')}</div>
 						<div class="text-2xl font-mono font-bold {getRTPColor(aggregate.overallRTP)}">
 							{formatRTP(aggregate.overallRTP)}
 						</div>
 					</div>
 					<div class="bg-[var(--color-graphite)]/50 rounded-xl p-4">
-						<div class="text-sm font-mono text-[var(--color-light)] mb-1">HIT RATE</div>
+						<div class="text-sm font-mono text-[var(--color-light)] mb-1">{$_('metrics.hitRate')}</div>
 						<div class="text-2xl font-mono font-bold text-[var(--color-light)]">
 							{formatHitRate(aggregate.overallHitRate)}
 						</div>
 					</div>
 					<div class="bg-[var(--color-graphite)]/50 rounded-xl p-4">
-						<div class="text-sm font-mono text-[var(--color-light)] mb-1">TOTAL BETS</div>
+						<div class="text-sm font-mono text-[var(--color-light)] mb-1">{$_('lgs.totalBets')}</div>
 						<div class="text-2xl font-mono font-bold text-[var(--color-light)]">
 							{aggregate.totalBets.toLocaleString()}
 						</div>
 					</div>
 					<div class="bg-[var(--color-graphite)]/50 rounded-xl p-4">
-						<div class="text-sm font-mono text-[var(--color-light)] mb-1">PLAYER P/L</div>
+						<div class="text-sm font-mono text-[var(--color-light)] mb-1">{$_('lgs.playerPL')}</div>
 						<div class="text-2xl font-mono font-bold {-aggregate.totalProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}">
 							{-aggregate.totalProfit >= 0 ? '+' : ''}{formatBalance(-aggregate.totalProfit)}
 						</div>
@@ -646,12 +531,12 @@
 		<div class="glass-panel rounded-2xl p-6">
 			<div class="flex items-center gap-3 mb-6">
 				<div class="w-1 h-5 bg-[var(--color-gold)] rounded-full"></div>
-				<h3 class="font-display text-lg text-[var(--color-light)] tracking-wider">FORCE NEXT OUTCOME</h3>
+				<h3 class="font-display text-lg text-[var(--color-light)] tracking-wider">{$_('lgs.forceNextOutcome')}</h3>
 			</div>
 
 			<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
 				<div>
-					<label class="block text-sm font-mono text-[var(--color-light)] mb-2">SESSION</label>
+					<label class="block text-sm font-mono text-[var(--color-light)] mb-2">{$_('lgs.session')}</label>
 					<select
 						bind:value={selectedSession}
 						class="w-full bg-[var(--color-graphite)] border border-white/10 rounded-lg px-3 py-2.5 text-sm font-mono text-[var(--color-light)] focus:outline-none focus:border-[var(--color-cyan)]"
@@ -663,12 +548,12 @@
 				</div>
 
 				<div>
-					<label class="block text-sm font-mono text-[var(--color-light)] mb-2">MODE</label>
+					<label class="block text-sm font-mono text-[var(--color-light)] mb-2">{$_('lgs.mode')}</label>
 					<select
 						bind:value={selectedMode}
 						class="w-full bg-[var(--color-graphite)] border border-white/10 rounded-lg px-3 py-2.5 text-sm font-mono text-[var(--color-light)] focus:outline-none focus:border-[var(--color-cyan)]"
 					>
-						<option value="">Select mode...</option>
+						<option value="">{$_('common.selectMode')}</option>
 						{#each modes as mode}
 							<option value={mode.mode}>{mode.mode}</option>
 						{/each}
@@ -676,11 +561,11 @@
 				</div>
 
 				<div>
-					<label class="block text-sm font-mono text-[var(--color-light)] mb-2">SIM ID</label>
+					<label class="block text-sm font-mono text-[var(--color-light)] mb-2">{$_('lgs.simId')}</label>
 					<input
 						type="number"
 						bind:value={simIdInput}
-						placeholder="Enter SimID..."
+						placeholder={$_('lgs.enterSimId')}
 						class="w-full bg-[var(--color-graphite)] border border-white/10 rounded-lg px-3 py-2.5 text-sm font-mono text-[var(--color-light)] focus:outline-none focus:border-[var(--color-cyan)]"
 					/>
 				</div>
@@ -691,7 +576,7 @@
 						disabled={forceLoading || !selectedSession || !selectedMode || !simIdInput}
 						class="w-full px-4 py-2 rounded-lg bg-[var(--color-gold)] text-[var(--color-void)] font-mono font-semibold text-sm hover:bg-[var(--color-gold)]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 					>
-						{forceLoading ? 'Setting...' : 'SET'}
+						{forceLoading ? $_('common.setting') : $_('buttons.set')}
 					</button>
 				</div>
 			</div>
@@ -706,7 +591,7 @@
 			<!-- Active Forced Outcomes -->
 			{#if Object.keys(forcedOutcomes).length > 0}
 				<div class="mt-4 pt-4 border-t border-white/10">
-					<div class="text-sm font-mono text-[var(--color-light)] mb-2">PENDING FORCED OUTCOMES</div>
+					<div class="text-sm font-mono text-[var(--color-light)] mb-2">{$_('lgs.pendingForcedOutcomes')}</div>
 					<div class="flex flex-wrap gap-2">
 						{#each Object.entries(forcedOutcomes) as [mode, simID]}
 							<div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--color-gold)]/20 text-[var(--color-gold)] text-sm font-mono">
@@ -730,13 +615,13 @@
 		<div class="glass-panel rounded-2xl p-6">
 			<div class="flex items-center gap-3 mb-6">
 				<div class="w-1 h-5 bg-emerald-500 rounded-full"></div>
-				<h3 class="font-display text-lg text-[var(--color-light)] tracking-wider">RTP BIAS</h3>
-				<span class="text-sm font-mono text-[var(--color-mist)]">Adjust payout probability weighting</span>
+				<h3 class="font-display text-lg text-[var(--color-light)] tracking-wider">{$_('lgs.rtpBias')}</h3>
+				<span class="text-sm font-mono text-[var(--color-mist)]">{$_('lgs.rtpBiasHint')}</span>
 			</div>
 
 			<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
 				<div>
-					<label class="block text-sm font-mono text-[var(--color-light)] mb-2">SESSION</label>
+					<label class="block text-sm font-mono text-[var(--color-light)] mb-2">{$_('lgs.session')}</label>
 					<select
 						bind:value={selectedSession}
 						class="w-full bg-[var(--color-graphite)] border border-white/10 rounded-lg px-3 py-2.5 text-sm font-mono text-[var(--color-light)] focus:outline-none focus:border-emerald-500"
@@ -748,7 +633,7 @@
 				</div>
 
 				<div>
-					<label class="block text-sm font-mono text-[var(--color-light)] mb-2">BIAS VALUE</label>
+					<label class="block text-sm font-mono text-[var(--color-light)] mb-2">{$_('lgs.biasValue')}</label>
 					<div class="flex items-center gap-3">
 						<div class="flex-1">
 							<input
@@ -785,7 +670,7 @@
 						disabled={biasLoading || !selectedSession}
 						class="w-full px-4 py-2 rounded-lg bg-emerald-600 text-white font-mono font-semibold text-sm hover:bg-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 					>
-						{biasLoading ? 'Setting...' : 'APPLY BIAS'}
+						{biasLoading ? $_('common.setting') : $_('buttons.applyBias')}
 					</button>
 				</div>
 			</div>
@@ -798,8 +683,8 @@
 			{/if}
 
 			<div class="mt-4 pt-4 border-t border-white/10 text-sm font-mono text-[var(--color-mist)]">
-				<strong>Formula:</strong> Wins: weight × (1 + payout/100)^bias. Losses (0x): weight × 0.5^bias.<br/>
-				<strong>Example bias=+2:</strong> 0x → 25%, 10x → 121x more likely
+				{$_('lgs.biasFormula')}<br/>
+				{$_('lgs.biasExample')}
 			</div>
 		</div>
 
@@ -807,14 +692,14 @@
 		<div class="glass-panel rounded-2xl p-6">
 			<div class="flex items-center gap-3 mb-6">
 				<div class="w-1 h-5 bg-[var(--color-coral)] rounded-full"></div>
-				<h3 class="font-display text-lg text-[var(--color-light)] tracking-wider">OPEN GAME</h3>
-				<span class="text-sm font-mono text-[var(--color-mist)]">Launch game in new tab</span>
+				<h3 class="font-display text-lg text-[var(--color-light)] tracking-wider">{$_('lgs.openGame')}</h3>
+				<span class="text-sm font-mono text-[var(--color-mist)]">{$_('lgs.openGameHint')}</span>
 			</div>
 
 			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
 				<!-- Game Server -->
 				<div>
-					<label class="block text-sm font-mono text-[var(--color-light)] mb-2">GAME SERVER</label>
+					<label class="block text-sm font-mono text-[var(--color-light)] mb-2">{$_('lgs.gameServer')}</label>
 					<input
 						type="text"
 						bind:value={gameDomain}
@@ -825,7 +710,7 @@
 
 				<!-- Session -->
 				<div>
-					<label class="block text-sm font-mono text-[var(--color-light)] mb-2">SESSION ID</label>
+					<label class="block text-sm font-mono text-[var(--color-light)] mb-2">{$_('lgs.sessionIdLabel')}</label>
 					<div class="flex gap-2">
 						<input
 							type="text"
@@ -841,7 +726,7 @@
 								}}
 								class="bg-[var(--color-graphite)] border border-white/10 rounded-lg px-2 py-2.5 text-sm font-mono text-[var(--color-light)] focus:outline-none focus:border-[var(--color-coral)]"
 							>
-								<option value="">Pick...</option>
+								<option value="">{$_('common.pick')}</option>
 								{#each sessions as session}
 									<option value={session.sessionID}>{session.sessionID}</option>
 								{/each}
@@ -852,7 +737,7 @@
 
 				<!-- Balance -->
 				<div>
-					<label class="block text-sm font-mono text-[var(--color-light)] mb-2">BALANCE ({getCurrencyDisplay(gameCurrency)})</label>
+					<label class="block text-sm font-mono text-[var(--color-light)] mb-2">{$_('lgs.balanceLabel')} ({getCurrencyDisplay(gameCurrency)})</label>
 					<input
 						type="number"
 						bind:value={gameBalance}
@@ -865,7 +750,7 @@
 
 				<!-- Currency -->
 				<div>
-					<label class="block text-sm font-mono text-[var(--color-light)] mb-2">CURRENCY</label>
+					<label class="block text-sm font-mono text-[var(--color-light)] mb-2">{$_('lgs.currency')}</label>
 					<select
 						bind:value={gameCurrency}
 						class="w-full bg-[var(--color-graphite)] border border-white/10 rounded-lg px-3 py-2.5 text-sm font-mono text-[var(--color-light)] focus:outline-none focus:border-[var(--color-coral)]"
@@ -878,7 +763,7 @@
 
 				<!-- Language -->
 				<div>
-					<label class="block text-sm font-mono text-[var(--color-light)] mb-2">LANGUAGE</label>
+					<label class="block text-sm font-mono text-[var(--color-light)] mb-2">{$_('lgs.language')}</label>
 					<select
 						bind:value={gameLanguage}
 						class="w-full bg-[var(--color-graphite)] border border-white/10 rounded-lg px-3 py-2.5 text-sm font-mono text-[var(--color-light)] focus:outline-none focus:border-[var(--color-coral)]"
@@ -891,13 +776,13 @@
 
 				<!-- Device -->
 				<div>
-					<label class="block text-sm font-mono text-[var(--color-light)] mb-2">DEVICE</label>
+					<label class="block text-sm font-mono text-[var(--color-light)] mb-2">{$_('lgs.device')}</label>
 					<select
 						bind:value={gameDevice}
 						class="w-full bg-[var(--color-graphite)] border border-white/10 rounded-lg px-3 py-2.5 text-sm font-mono text-[var(--color-light)] focus:outline-none focus:border-[var(--color-coral)]"
 					>
-						<option value="desktop">Desktop</option>
-						<option value="mobile">Mobile</option>
+						<option value="desktop">{$_('lgs.desktop')}</option>
+						<option value="mobile">{$_('lgs.mobile')}</option>
 					</select>
 				</div>
 
@@ -909,7 +794,7 @@
 							bind:checked={gameDemo}
 							class="w-4 h-4 rounded border-white/20 bg-[var(--color-graphite)] text-[var(--color-coral)] focus:ring-[var(--color-coral)] focus:ring-offset-0"
 						/>
-						<span class="text-sm font-mono text-[var(--color-light)]">Demo</span>
+						<span class="text-sm font-mono text-[var(--color-light)]">{$_('lgs.demo')}</span>
 					</label>
 					<label class="flex items-center gap-2 cursor-pointer">
 						<input
@@ -917,7 +802,7 @@
 							bind:checked={gameSocial}
 							class="w-4 h-4 rounded border-white/20 bg-[var(--color-graphite)] text-[var(--color-coral)] focus:ring-[var(--color-coral)] focus:ring-offset-0"
 						/>
-						<span class="text-sm font-mono text-[var(--color-light)]">Social</span>
+						<span class="text-sm font-mono text-[var(--color-light)]">{$_('lgs.social')}</span>
 					</label>
 				</div>
 			</div>
@@ -937,16 +822,16 @@
 							<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
 							<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
 						</svg>
-						OPENING...
+						{$_('buttons.opening')}
 					{:else}
 						<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
 						</svg>
-						OPEN GAME
+						{$_('buttons.openGame')}
 					{/if}
 				</button>
 				<span class="text-sm font-mono text-[var(--color-mist)]">
-					Settings are saved to localStorage
+					{$_('lgs.settingsSaved')}
 				</span>
 			</div>
 		</div>
@@ -955,7 +840,7 @@
 		<div class="glass-panel rounded-2xl p-6">
 			<div class="flex items-center gap-3 mb-6">
 				<div class="w-1 h-5 bg-[var(--color-violet)] rounded-full"></div>
-				<h3 class="font-display text-lg text-[var(--color-light)] tracking-wider">SESSIONS</h3>
+				<h3 class="font-display text-lg text-[var(--color-light)] tracking-wider">{$_('lgs.sessions')}</h3>
 				<span class="text-sm font-mono text-[var(--color-mist)]">({sessions.length})</span>
 				<div class="ml-auto flex items-center gap-3">
 					<!-- Create Session -->
@@ -963,7 +848,7 @@
 						<input
 							type="text"
 							bind:value={newSessionID}
-							placeholder="session-id"
+							placeholder={$_('lgs.sessionId')}
 							class="w-36 bg-[var(--color-graphite)] border border-white/10 rounded-lg px-3 py-1.5 text-sm font-mono text-[var(--color-light)] focus:outline-none focus:border-[var(--color-violet)] placeholder:text-[var(--color-mist)]/50"
 						/>
 						<button
@@ -971,49 +856,49 @@
 							disabled={createSessionLoading}
 							class="px-4 py-1.5 rounded-lg bg-[var(--color-violet)] text-white text-sm font-mono font-semibold hover:bg-[var(--color-violet)]/80 transition-colors disabled:opacity-50"
 						>
-							{createSessionLoading ? '...' : 'CREATE'}
+							{createSessionLoading ? '...' : $_('buttons.create')}
 						</button>
 					</div>
 					<div class="w-px h-4 bg-white/10"></div>
 					{#if wsConnected}
 						<span class="flex items-center gap-1.5 text-sm font-mono text-emerald-400">
 							<span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
-							LIVE
+							{$_('status.live')}
 						</span>
 					{:else}
 						<span class="flex items-center gap-1.5 text-sm font-mono text-[var(--color-mist)]">
 							<span class="w-2 h-2 bg-[var(--color-mist)] rounded-full"></span>
-							Offline
+							{$_('status.offline')}
 						</span>
 					{/if}
 					<button
 						onclick={loadSessions}
 						class="text-sm font-mono text-[var(--color-cyan)] hover:text-[var(--color-cyan)]/80 transition-colors"
 					>
-						Refresh
+						{$_('buttons.refresh')}
 					</button>
 				</div>
 			</div>
 
 			{#if loading && sessions.length === 0}
-				<div class="py-8 text-center text-[var(--color-mist)]">Loading sessions...</div>
+				<div class="py-8 text-center text-[var(--color-mist)]">{$_('status.loadingSessions')}</div>
 			{:else if error}
 				<div class="py-8 text-center text-red-400">{error}</div>
 			{:else if sessions.length === 0}
-				<div class="py-8 text-center text-[var(--color-mist)]">No active sessions</div>
+				<div class="py-8 text-center text-[var(--color-mist)]">{$_('status.noActiveSessions')}</div>
 			{:else}
 				<div class="overflow-x-auto">
 					<table class="w-full">
 						<thead>
 							<tr class="text-left text-sm uppercase text-[var(--color-light)] tracking-wider">
-								<th class="pb-3 font-medium">Session</th>
-								<th class="pb-3 text-right font-medium">Balance</th>
-								<th class="pb-3 text-right font-medium">Bets</th>
-								<th class="pb-3 text-right font-medium">RTP</th>
-								<th class="pb-3 text-right font-medium">Hit Rate</th>
-								<th class="pb-3 text-right font-medium">Bias</th>
-								<th class="pb-3 text-right font-medium">P/L</th>
-								<th class="pb-3 text-right font-medium">Actions</th>
+								<th class="pb-3 font-medium">{$_('table.session')}</th>
+								<th class="pb-3 text-right font-medium">{$_('table.balance')}</th>
+								<th class="pb-3 text-right font-medium">{$_('table.bets')}</th>
+								<th class="pb-3 text-right font-medium">{$_('metrics.rtp')}</th>
+								<th class="pb-3 text-right font-medium">{$_('table.hitRate')}</th>
+								<th class="pb-3 text-right font-medium">{$_('table.bias')}</th>
+								<th class="pb-3 text-right font-medium">{$_('table.pl')}</th>
+								<th class="pb-3 text-right font-medium">{$_('table.actions')}</th>
 							</tr>
 						</thead>
 						<tbody class="text-sm">
@@ -1046,23 +931,23 @@
 											<button
 												onclick={() => openSimulateModal(session.sessionID)}
 												class="px-3 py-1.5 rounded text-sm font-mono font-semibold bg-[var(--color-cyan)]/20 text-[var(--color-cyan)] hover:bg-[var(--color-cyan)]/30 transition-colors"
-												title="Run Batch Simulation"
+												title={$_('buttons.simulate')}
 											>
-												SIM
+												{$_('buttons.simulate')}
 											</button>
 											<button
 												onclick={() => resetBalance(session.sessionID)}
 												class="px-3 py-1.5 rounded text-sm font-mono text-[var(--color-mist)] hover:bg-white/10 transition-colors"
-												title="Reset Balance"
+												title={$_('lgs.resetBalance')}
 											>
-												Reset
+												{$_('buttons.reset')}
 											</button>
 											<button
 												onclick={() => clearStats(session.sessionID)}
 												class="px-3 py-1.5 rounded text-sm font-mono text-[var(--color-mist)] hover:bg-white/10 transition-colors"
-												title="Clear Stats"
+												title={$_('lgs.clearStats')}
 											>
-												Clear
+												{$_('buttons.clear')}
 											</button>
 										</div>
 									</td>

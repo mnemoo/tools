@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { PayoutBucket } from '$lib/api';
+	import { _ } from '$lib/i18n';
 
 	interface Props {
 		buckets: PayoutBucket[];
@@ -19,9 +20,9 @@
 		return '0';
 	}
 
-	function formatRange(bucket: PayoutBucket): string {
+	function formatRange(bucket: PayoutBucket, lossLabel: string): string {
 		if (bucket.range_start === 0 && bucket.range_end === 0) {
-			return '0x (loss)';
+			return lossLabel;
 		}
 		// Last bucket (extends to max)
 		if (bucket.range_end >= maxRangeEnd * 0.99) {
@@ -64,17 +65,17 @@
 <div class="h-full flex flex-col">
 	<div class="flex items-center gap-3 mb-6 shrink-0">
 		<div class="w-1 h-5 bg-[var(--color-cyan)] rounded-full"></div>
-		<h3 class="font-display text-lg text-[var(--color-light)] tracking-wider">WEIGHTED PAYOUT DISTRIBUTION</h3>
+		<h3 class="font-display text-lg text-[var(--color-light)] tracking-wider">{$_('distribution.title')}</h3>
 	</div>
 
 	{#if buckets.length === 0}
-		<div class="py-8 text-center text-slate-500">No data</div>
+		<div class="py-8 text-center text-slate-500">{$_('status.noData')}</div>
 	{:else}
 		<div class="flex-1 overflow-y-auto pr-1 space-y-2 scrollbar-thin min-h-0">
 			{#each buckets as bucket}
 				<div class="flex items-center gap-3 group">
 					<div class="w-32 shrink-0 text-right text-sm text-slate-400 font-mono">
-						{formatRange(bucket)}
+						{formatRange(bucket, $_('distribution.loss'))}
 					</div>
 					<div class="relative h-7 flex-1 overflow-hidden rounded-lg bg-slate-700/50">
 						<div
@@ -94,8 +95,8 @@
 		</div>
 
 		<div class="mt-4 flex items-center justify-end gap-6 text-xs text-slate-500 shrink-0">
-			<span>Odds</span>
-			<span class="w-16 text-right">Count</span>
+			<span>{$_('table.odds')}</span>
+			<span class="w-16 text-right">{$_('table.count')}</span>
 		</div>
 	{/if}
 </div>

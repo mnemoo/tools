@@ -1,0 +1,69 @@
+{
+    "app": {
+        "title": "Mnemoo Tools",
+        "backend": "Backend",
+        "frontend": "Frontend"
+    },
+    "buttons": {
+        "startAll": "Iniciar tudo",
+        "startAllServices": "Iniciar todos os serviços",
+        "stopAll": "Parar tudo",
+        "stop": "Parar",
+        "restart": "Reiniciar",
+        "openBrowser": "Abrir no navegador",
+        "reload": "Recarregar",
+        "changeDir": "Alterar diretório",
+        "killAll": "Encerrar tudo",
+        "save": "Salvar",
+        "cancel": "Cancelar",
+        "browse": "Procurar",
+        "clear": "Limpar",
+        "selectFolder": "Selecionar pasta"
+    },
+    "settings": {
+        "title": "Configurações",
+        "libraryPath": "Caminho da biblioteca",
+        "frontendPort": "Porta do frontend",
+        "language": "Idioma",
+        "autoLoadBooks": "Carregar livros automaticamente",
+        "autoLoadBooksLong": "Carregar livros de eventos ao iniciar",
+        "autoLoadBooksHint": "Quando desativado, os livros não serão carregados automaticamente para evitar alto uso de CPU. Você pode iniciar o carregamento manualmente a partir do frontend.",
+        "autoReloadLUT": "Recarregar LUT automaticamente",
+        "dependencies": "Dependências"
+    },
+    "logs": {
+        "title": "Logs",
+        "noLogs": "Nenhum log ainda. Inicie os serviços para ver a saída."
+    },
+    "welcome": {
+        "title": "Bem-vindo ao Mnemoo Tools",
+        "description": "Inicie os serviços para começar a usar o Mnemoo Tools.",
+        "selectFolder": "Primeiro, selecione sua pasta de biblioteca nas configurações."
+    },
+    "status": {
+        "running": "Executando",
+        "stopped": "Parado",
+        "starting": "Iniciando...",
+        "error": "Erro"
+    },
+    "errors": {
+        "portsInUse": "Portas em uso:",
+        "libraryNotSet": "Caminho da biblioteca não definido."
+    },
+    "languages": {
+        "en": "English",
+        "ru": "Русский",
+        "es": "Español",
+        "zh": "中文",
+        "fr": "Français",
+        "it": "Italiano",
+        "de": "Deutsch",
+        "ko": "한국어",
+        "pt": "Português",
+        "el": "Ελληνικά",
+        "tr": "Türkçe",
+        "vi": "Tiếng Việt",
+        "th": "ไทย",
+        "fi": "Suomi"
+    }
+}

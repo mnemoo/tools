@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { api, type DistributionItem, type PayoutBucket, type LGSSessionSummary, type BucketDistributionResponse } from '$lib/api';
+	import { _ } from '$lib/i18n';
 
 	interface Props {
 		buckets: PayoutBucket[];
@@ -180,13 +181,13 @@
 		return '0';
 	}
 
-	function formatOdds(probability: number): string {
+	function formatOddsValue(probability: number): string {
 		if (probability === 0) return '-';
 		const odds = 1 / probability;
-		if (odds >= 1_000_000) return '1 in ' + (odds / 1_000_000).toFixed(1) + 'M';
-		if (odds >= 1_000) return '1 in ' + (odds / 1_000).toFixed(1) + 'K';
-		if (odds >= 10) return '1 in ' + odds.toFixed(0);
-		return '1 in ' + odds.toFixed(2);
+		if (odds >= 1_000_000) return (odds / 1_000_000).toFixed(1) + 'M';
+		if (odds >= 1_000) return (odds / 1_000).toFixed(1) + 'K';
+		if (odds >= 10) return odds.toFixed(0);
+		return odds.toFixed(2);
 	}
 
 	function getBarColor(rangeStart: number): string {
@@ -238,13 +239,13 @@
 <div>
 	<div class="flex items-center gap-3 mb-6 flex-wrap">
 		<div class="w-1 h-5 bg-[var(--color-white)] rounded-full"></div>
-		<h3 class="font-display text-lg text-[var(--color-light)] tracking-wider">DISTRIBUTION</h3>
-		<span class="text-xs font-mono text-[var(--color-mist)]">({totalPayouts().toLocaleString()} books)</span>
+		<h3 class="font-display text-lg text-[var(--color-light)] tracking-wider">{$_('nav.distribution')}</h3>
+		<span class="text-xs font-mono text-[var(--color-mist)]">({totalPayouts().toLocaleString()} {$_('table.books').toLowerCase()})</span>
 
 		<!-- Session selector for force -->
 		{#if sessions.length > 0}
 			<div class="ml-auto flex items-center gap-2">
-				<span class="text-xs font-mono text-[var(--color-mist)]">Session:</span>
+				<span class="text-xs font-mono text-[var(--color-mist)]">{$_('lgs.session')}:</span>
 				<select
 					bind:value={selectedSession}
 					class="bg-[var(--color-graphite)] border border-white/10 rounded px-2 py-1 text-xs font-mono text-[var(--color-light)] focus:outline-none focus:border-[var(--color-cyan)]"
@@ -258,7 +259,7 @@
 	</div>
 
 	{#if !buckets || buckets.length === 0}
-		<div class="py-8 text-center text-slate-500">No data</div>
+		<div class="py-8 text-center text-slate-500">{$_('status.noData')}</div>
 	{:else}
 		<div class="space-y-2">
 			{#each sortedBuckets() as bucket}
@@ -293,12 +294,12 @@
 						<!-- Stats -->
 						<div class="flex items-center gap-6 ml-auto text-xs font-mono">
 							<div class="flex items-center gap-2">
-								<span class="text-[var(--color-mist)]">Books:</span>
+								<span class="text-[var(--color-mist)]">{$_('table.books')}:</span>
 								<span class="text-[var(--color-cyan)]">{bucket.count.toLocaleString()}</span>
 							</div>
 							<div class="flex items-center gap-2">
-								<span class="text-[var(--color-mist)]">Odds:</span>
-								<span class="text-white">{formatOdds(bucket.probability)}</span>
+								<span class="text-[var(--color-mist)]">{$_('table.odds')}:</span>
+								<span class="text-white">{bucket.probability === 0 ? '-' : $_('distribution.oneIn', { values: { value: formatOddsValue(bucket.probability) } })}</span>
 							</div>
 						</div>
 					</button>
@@ -317,18 +318,18 @@
 								<div class="py-8 text-center text-red-400 text-sm font-mono">{data?.error}</div>
 							{:else if data?.items.length === 0}
 								<!-- No items -->
-								<div class="py-8 text-center text-slate-500 text-sm">No payouts in this range</div>
+								<div class="py-8 text-center text-slate-500 text-sm">{$_('distribution.noPayouts')}</div>
 							{:else if data}
 								<!-- Items table -->
 								<div class="max-h-[400px] overflow-auto">
 									<table class="w-full">
 										<thead class="sticky top-0 bg-slate-800/95 backdrop-blur-sm">
 											<tr class="text-left text-xs uppercase text-slate-500 tracking-wider">
-												<th class="px-4 py-2 font-medium">Payout</th>
-												<th class="px-4 py-2 text-right font-medium">Books</th>
-												<th class="px-4 py-2 text-right font-medium">Weight</th>
-												<th class="px-4 py-2 text-right font-medium">Odds</th>
-												<th class="px-4 py-2 text-center font-medium">Actions</th>
+												<th class="px-4 py-2 font-medium">{$_('table.payout')}</th>
+												<th class="px-4 py-2 text-right font-medium">{$_('table.books')}</th>
+												<th class="px-4 py-2 text-right font-medium">{$_('table.weight')}</th>
+												<th class="px-4 py-2 text-right font-medium">{$_('table.odds')}</th>
+												<th class="px-4 py-2 text-center font-medium">{$_('table.actions')}</th>
 											</tr>
 										</thead>
 										<tbody class="text-sm">
@@ -353,7 +354,7 @@
 																	class="px-2 py-1 rounded text-xs font-mono bg-[var(--color-cyan)]/20 text-[var(--color-cyan)] hover:bg-[var(--color-cyan)]/30 transition-colors"
 																	title="View event #{item.sim_ids[0]}"
 																>
-																	LOOK
+																	{$_('distribution.look')}
 																</button>
 
 																<!-- FORCE button -->
@@ -367,7 +368,7 @@
 																		{#if forceLoading === item.sim_ids[0]}
 																			...
 																		{:else}
-																			FORCE
+																			{$_('distribution.force')}
 																		{/if}
 																	</button>
 																{/if}
@@ -395,7 +396,7 @@
 											{#if data?.loading}
 												<span class="inline-block w-4 h-4 border-2 border-[var(--color-cyan)] border-t-transparent rounded-full animate-spin mr-2"></span>
 											{/if}
-											Loading more... ({data?.items.length} / {data?.total})
+											{$_('distribution.loadingMore')} ({data?.items.length} / {data?.total})
 										</div>
 									{/if}
 								</div>

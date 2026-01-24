@@ -2,6 +2,7 @@
 	import { api } from '$lib/api/client';
 	import { onMount, onDestroy } from 'svelte';
 	import type { WSOptimizerProgress, WSOptimizerMessage, ModeAnalysis, GenerateConfigsAnalysis, VoidedBucketInfo, VoidedOutcomeInfo } from '$lib/api/types';
+	import { _ } from '$lib/i18n';
 
 	// Simple mode info type for optimizer context (subset of full ModeInfo)
 	type SimpleModeInfo = {
@@ -270,7 +271,7 @@
 			// Try to refresh mode info, then re-check
 			loadModeInfo();
 			if (!canConvert()) {
-				error = 'Mode cost unknown — cannot convert formats';
+				error = 'Mode cost unknown - cannot convert formats';
 				return;
 			}
 		}
@@ -839,12 +840,12 @@
 			class="flex-1 px-4 py-2.5 rounded-lg font-mono text-sm transition-all
 				   {uiMode === 'presets' ? 'bg-[var(--color-gold)]/20 text-[var(--color-gold)]' : 'text-[var(--color-mist)] hover:text-[var(--color-light)]'}"
 			onclick={() => uiMode = 'presets'}
-		>PRESETS</button>
+		>{$_('optimizer.presets')}</button>
 		<button
 			class="flex-1 px-4 py-2.5 rounded-lg font-mono text-sm transition-all
 				   {uiMode === 'manual' ? 'bg-[var(--color-cyan)]/20 text-[var(--color-cyan)]' : 'text-[var(--color-mist)] hover:text-[var(--color-light)]'}"
 			onclick={() => uiMode = 'manual'}
-		>MANUAL</button>
+		>{$_('optimizer.manual')}</button>
 	</div>
 
 	<!-- NOTE: Top explanatory bonus-mode banner removed per UX request. -->
@@ -894,7 +895,7 @@
 		{#if analysisInfo}
 			<div class="p-3 rounded-xl bg-[var(--color-slate)]/30 border border-white/[0.03]">
 				<div class="flex items-center gap-2 mb-2">
-					<span class="text-sm font-mono text-[var(--color-mist)]">Mode Analysis:</span>
+					<span class="text-sm font-mono text-[var(--color-mist)]">{$_('optimizer.modeAnalysis')}</span>
 					<span class="px-2 py-0.5 rounded text-xs font-mono
 						{analysisInfo.mode_type === 'extreme' ? 'bg-red-500/20 text-red-400' :
 						 analysisInfo.mode_type === 'high_rtp' ? 'bg-orange-500/20 text-orange-400' :
@@ -905,8 +906,8 @@
 					</span>
 				</div>
 				<div class="grid grid-cols-2 gap-2 text-xs font-mono text-[var(--color-mist)]/80">
-					<span>Min RTP: {formatRTPDisplay(analysisInfo.min_achievable_rtp)}</span>
-					<span>Max RTP: {formatRTPDisplay(analysisInfo.max_achievable_rtp)}</span>
+					<span>{$_('optimizer.minRtp')} {formatRTPDisplay(analysisInfo.min_achievable_rtp)}</span>
+					<span>{$_('optimizer.maxRtp')} {formatRTPDisplay(analysisInfo.max_achievable_rtp)}</span>
 				</div>
 			</div>
 		{/if}
@@ -932,17 +933,17 @@
 				>
 					<div class="flex items-center gap-2 mb-2">
 						<span class="text-2xl">🎯</span>
-						<span class="font-mono text-lg text-[var(--color-emerald)]">LOW</span>
+						<span class="font-mono text-lg text-[var(--color-emerald)]">{$_('optimizer.low')}</span>
 					</div>
-					<p class="text-xs font-mono text-[var(--color-mist)] mb-3">Volatility</p>
+					<p class="text-xs font-mono text-[var(--color-mist)] mb-3">{$_('optimizer.volatility')}</p>
 					{#if presetConfigsMap['low']}
 						<div class="flex flex-col gap-1 text-xs font-mono text-[var(--color-mist)]/80">
-							<span>{presetConfigsMap['low'].stats.total_buckets} buckets</span>
-							<span>~1:{Math.round(presetConfigsMap['low'].stats.avg_hit_rate)} hit</span>
+							<span>{presetConfigsMap['low'].stats.total_buckets} {$_('optimizer.buckets')}</span>
+							<span>~1:{Math.round(presetConfigsMap['low'].stats.avg_hit_rate)} {$_('optimizer.hit')}</span>
 						</div>
 					{/if}
 					{#if selectedPreset === 'low'}
-						<div class="mt-2 text-xs font-mono text-[var(--color-emerald)]">✓ selected</div>
+						<div class="mt-2 text-xs font-mono text-[var(--color-emerald)]">✓ {$_('optimizer.selected')}</div>
 					{/if}
 				</button>
 
@@ -957,17 +958,17 @@
 				>
 					<div class="flex items-center gap-2 mb-2">
 						<span class="text-2xl">⚖️</span>
-						<span class="font-mono text-lg text-[var(--color-cyan)]">MEDIUM</span>
+						<span class="font-mono text-lg text-[var(--color-cyan)]">{$_('optimizer.medium')}</span>
 					</div>
-					<p class="text-xs font-mono text-[var(--color-mist)] mb-3">Volatility</p>
+					<p class="text-xs font-mono text-[var(--color-mist)] mb-3">{$_('optimizer.volatility')}</p>
 					{#if presetConfigsMap['medium']}
 						<div class="flex flex-col gap-1 text-xs font-mono text-[var(--color-mist)]/80">
-							<span>{presetConfigsMap['medium'].stats.total_buckets} buckets</span>
-							<span>~1:{Math.round(presetConfigsMap['medium'].stats.avg_hit_rate)} hit</span>
+							<span>{presetConfigsMap['medium'].stats.total_buckets} {$_('optimizer.buckets')}</span>
+							<span>~1:{Math.round(presetConfigsMap['medium'].stats.avg_hit_rate)} {$_('optimizer.hit')}</span>
 						</div>
 					{/if}
 					{#if selectedPreset === 'medium'}
-						<div class="mt-2 text-xs font-mono text-[var(--color-cyan)]">✓ selected</div>
+						<div class="mt-2 text-xs font-mono text-[var(--color-cyan)]">✓ {$_('optimizer.selected')}</div>
 					{/if}
 				</button>
 
@@ -982,23 +983,23 @@
 				>
 					<div class="flex items-center gap-2 mb-2">
 						<span class="text-2xl">🎢</span>
-						<span class="font-mono text-lg text-[var(--color-coral)]">HIGH</span>
+						<span class="font-mono text-lg text-[var(--color-coral)]">{$_('optimizer.high')}</span>
 					</div>
-					<p class="text-xs font-mono text-[var(--color-mist)] mb-3">Volatility</p>
+					<p class="text-xs font-mono text-[var(--color-mist)] mb-3">{$_('optimizer.volatility')}</p>
 					{#if presetConfigsMap['high']}
 						<div class="flex flex-col gap-1 text-xs font-mono text-[var(--color-mist)]/80">
-							<span>{presetConfigsMap['high'].stats.total_buckets} buckets</span>
-							<span>~1:{Math.round(presetConfigsMap['high'].stats.avg_hit_rate)} hit</span>
+							<span>{presetConfigsMap['high'].stats.total_buckets} {$_('optimizer.buckets')}</span>
+							<span>~1:{Math.round(presetConfigsMap['high'].stats.avg_hit_rate)} {$_('optimizer.hit')}</span>
 						</div>
 					{/if}
 					{#if selectedPreset === 'high'}
-						<div class="mt-2 text-xs font-mono text-[var(--color-coral)]">✓ selected</div>
+						<div class="mt-2 text-xs font-mono text-[var(--color-coral)]">✓ {$_('optimizer.selected')}</div>
 					{/if}
 				</button>
 			</div>
 		{:else}
 			<div class="text-center py-8 text-sm font-mono text-[var(--color-mist)]">
-				Failed to load presets. <button class="text-[var(--color-gold)] hover:underline" onclick={loadPresetsForUI}>Retry</button>
+				{$_('optimizer.failedToLoadPresets')} <button class="text-[var(--color-gold)] hover:underline" onclick={loadPresetsForUI}>{$_('optimizer.retry')}</button>
 			</div>
 		{/if}
 
@@ -1006,7 +1007,7 @@
 		<div class="p-3 rounded-xl bg-gradient-to-r from-[var(--color-gold)]/10 to-[var(--color-coral)]/10 border border-[var(--color-gold)]/20">
 			<div class="flex items-center justify-between mb-3">
 				<div class="flex items-center gap-2">
-					<span class="font-mono text-sm text-[var(--color-gold)]">MAXWIN CONTROL</span>
+					<span class="font-mono text-sm text-[var(--color-gold)]">{$_('optimizer.maxwinControl')}</span>
 					<span class="px-2 py-0.5 text-xs font-mono bg-[var(--color-emerald)]/20 text-[var(--color-emerald)] rounded">NEW</span>
 				</div>
 				<button
@@ -1014,13 +1015,13 @@
 					onclick={autoFillMaxWin}
 					title="Auto-fill optimal maxwin values (1% RTP)"
 					{disabled}
-				>AUTO-FILL</button>
+				>{$_('optimizer.autoFill')}</button>
 			</div>
 
 			<div class="grid grid-cols-2 gap-3">
 				<!-- MaxWin Frequency -->
 				<div class="flex flex-col gap-1">
-					<label class="text-xs font-mono text-[var(--color-mist)]">Frequency</label>
+					<label class="text-xs font-mono text-[var(--color-mist)]">{$_('optimizer.frequency')}</label>
 					<div class="flex items-center gap-1.5">
 						<span class="text-sm text-[var(--color-coral)]">1:</span>
 						<input
@@ -1034,12 +1035,12 @@
 							{disabled}
 						/>
 					</div>
-					<span class="text-xs font-mono text-[var(--color-mist)]/60">1 in {formatFreq(maxWinFreq)} spins</span>
+					<span class="text-xs font-mono text-[var(--color-mist)]/60">{$_('optimizer.oneInSpins', { values: { value: formatFreq(maxWinFreq) } })}</span>
 				</div>
 
 				<!-- RTP Contribution -->
 				<div class="flex flex-col gap-1">
-					<label class="text-xs font-mono text-[var(--color-mist)]">RTP Contribution</label>
+					<label class="text-xs font-mono text-[var(--color-mist)]">{$_('optimizer.rtpContribution')}</label>
 					<div class="flex items-center gap-1.5">
 						<input
 							type="number"
@@ -1054,13 +1055,13 @@
 						/>
 						<span class="text-sm text-[var(--color-violet)]">%</span>
 					</div>
-					<span class="text-xs font-mono text-[var(--color-mist)]/60">{maxWinRtpContrib}% of target RTP</span>
+					<span class="text-xs font-mono text-[var(--color-mist)]/60">{maxWinRtpContrib}{$_('optimizer.ofTargetRtp')}</span>
 				</div>
 			</div>
 
 			{#if modeInfo?.max_payout}
 				<div class="mt-2 text-xs font-mono text-[var(--color-mist)]/60">
-					Max payout: {modeInfo.max_payout}x
+					{$_('optimizer.maxPayout')} {modeInfo.max_payout}x
 				</div>
 			{/if}
 			{#if maxWinWarning}
@@ -1073,23 +1074,23 @@
 		<!-- Brute Force Panel (inline) -->
 		<div class="flex items-center justify-between p-3 rounded-xl bg-[var(--color-violet)]/10 border border-[var(--color-violet)]/20">
 			<div class="flex items-center gap-2">
-				<span class="font-mono text-sm text-[var(--color-light)]">BRUTE FORCE</span>
-				<span class="text-xs font-mono text-[var(--color-mist)]">runs until RTP converges</span>
+				<span class="font-mono text-sm text-[var(--color-light)]">{$_('optimizer.bruteForce')}</span>
+				<span class="text-xs font-mono text-[var(--color-mist)]">{$_('optimizer.runsUntilConverged')}</span>
 			</div>
 			{#if isLoading}
 				<button
 					class="px-4 py-1.5 text-xs font-mono rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-all"
 					onclick={stopOptimization}
 					title="Stop optimization and use best result so far"
-				>STOP</button>
+				>{$_('optimizer.stop')}</button>
 			{/if}
 		</div>
 
 		<!-- Auto-Voiding Panel (PRESETS mode) -->
 		<div class="flex items-center justify-between p-3 rounded-xl bg-[var(--color-coral)]/5 border border-[var(--color-coral)]/20">
 			<div class="flex items-center gap-2">
-				<span class="font-mono text-sm text-[var(--color-coral)]">AUTO-VOID</span>
-				<span class="text-xs font-mono text-[var(--color-mist)]">auto-remove outcomes to reach RTP</span>
+				<span class="font-mono text-sm text-[var(--color-coral)]">{$_('optimizer.autoVoid')}</span>
+				<span class="text-xs font-mono text-[var(--color-mist)]">{$_('optimizer.autoRemoveOutcomes')}</span>
 			</div>
 			<button
 				class="relative w-10 h-5 rounded-full transition-all {enableAutoVoiding ? 'bg-[var(--color-coral)]' : 'bg-[var(--color-slate)]'}"
@@ -1199,7 +1200,7 @@
 			{@const info = modeAnalysis || analysisInfo}
 			<div class="p-3 rounded-xl bg-[var(--color-slate)]/30 border border-white/[0.03]">
 				<div class="flex items-center gap-2 mb-2">
-					<span class="text-sm font-mono text-[var(--color-mist)]">RTP Range:</span>
+					<span class="text-sm font-mono text-[var(--color-mist)]">{$_('optimizer.modeAnalysis')}</span>
 					{#if info && 'mode_type' in info}
 						<span class="px-2 py-0.5 rounded text-xs font-mono
 							{info.mode_type === 'extreme' ? 'bg-red-500/20 text-red-400' :
@@ -1212,8 +1213,8 @@
 				</div>
 				{#if info}
 					<div class="grid grid-cols-2 gap-2 text-xs font-mono text-[var(--color-mist)]/80">
-						<span>Min RTP: {formatRTPDisplay(info.min_achievable_rtp)}</span>
-						<span>Max RTP: {formatRTPDisplay(info.max_achievable_rtp)}</span>
+						<span>{$_('optimizer.minRtp')} {formatRTPDisplay(info.min_achievable_rtp)}</span>
+						<span>{$_('optimizer.maxRtp')} {formatRTPDisplay(info.max_achievable_rtp)}</span>
 					</div>
 				{/if}
 			</div>
@@ -1267,8 +1268,8 @@
 							</div>
 							<p class="text-xs font-mono text-[var(--color-mist)] line-clamp-2 mb-2">{config.description}</p>
 							<div class="flex gap-3 text-xs font-mono text-[var(--color-mist)]/80">
-								<span>{config.stats.total_buckets} buckets</span>
-								<span>~1:{Math.round(config.stats.avg_hit_rate)} hit</span>
+								<span>{config.stats.total_buckets} {$_('optimizer.buckets')}</span>
+								<span>~1:{Math.round(config.stats.avg_hit_rate)} {$_('optimizer.hit')}</span>
 							</div>
 						</button>
 					{/each}
@@ -1453,12 +1454,12 @@
 		<!-- Options Panel -->
 		<div class="space-y-3 p-4 rounded-xl bg-[var(--color-onyx)]/50 border border-white/[0.05]">
 			<div class="flex items-center gap-2 mb-3">
-				<span class="text-sm font-mono text-[var(--color-light)]">OPTIONS</span>
+				<span class="text-sm font-mono text-[var(--color-light)]">{$_('optimizer.options')}</span>
 			</div>
 
 			<!-- Global Max Win Frequency -->
 			<div class="flex items-center justify-between">
-				<span class="text-sm font-mono text-[var(--color-mist)]">MAX WIN FREQ</span>
+				<span class="text-sm font-mono text-[var(--color-mist)]">{$_('optimizer.maxWinFreq')}</span>
 				<div class="flex items-center gap-1.5">
 					<span class="text-sm text-[var(--color-coral)]">1:</span>
 					<input
@@ -1476,23 +1477,23 @@
 			<!-- Brute Force Mode -->
 			<div class="flex items-center justify-between">
 				<div class="flex items-center gap-2">
-					<span class="text-sm font-mono text-[var(--color-mist)]">BRUTE FORCE</span>
-					<span class="text-xs font-mono text-[var(--color-mist)]/50">runs until RTP converges</span>
+					<span class="text-sm font-mono text-[var(--color-mist)]">{$_('optimizer.bruteForce')}</span>
+					<span class="text-xs font-mono text-[var(--color-mist)]/50">{$_('optimizer.runsUntilConverged')}</span>
 				</div>
 				{#if isLoading}
 					<button
 						class="px-4 py-1.5 text-xs font-mono rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-all"
 						onclick={stopOptimization}
 						title="Stop optimization and use best result so far"
-					>STOP</button>
+					>{$_('optimizer.stop')}</button>
 				{/if}
 			</div>
 
 			<!-- Auto-Voiding Toggle -->
 			<div class="flex items-center justify-between">
 				<div class="flex items-center gap-2">
-					<span class="text-sm font-mono text-[var(--color-mist)]">AUTO-VOID</span>
-					<span class="text-xs font-mono text-[var(--color-mist)]/50">auto-remove outcomes to reach RTP</span>
+					<span class="text-sm font-mono text-[var(--color-mist)]">{$_('optimizer.autoVoid')}</span>
+					<span class="text-xs font-mono text-[var(--color-mist)]/50">{$_('optimizer.autoRemoveOutcomes')}</span>
 				</div>
 				<button
 					class="relative w-10 h-5 rounded-full transition-all {enableAutoVoiding ? 'bg-[var(--color-coral)]' : 'bg-[var(--color-slate)]'}"
@@ -1600,7 +1601,7 @@
 				<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
 			</svg>
 		{/if}
-		{isLoading ? 'OPTIMIZING...' : 'OPTIMIZE'}
+		{isLoading ? $_('optimizer.optimizing') : $_('optimizer.optimize')}
 	</button>
 
 	<!-- Error -->
@@ -1614,9 +1615,9 @@
 	{#if result}
 		<div class="rounded-xl bg-[var(--color-graphite)]/50 border border-white/[0.03] overflow-hidden">
 			<div class="px-4 py-3 border-b border-white/[0.03] flex items-center gap-2">
-				<span class="font-mono text-sm text-[var(--color-light)]">RESULT</span>
+				<span class="font-mono text-sm text-[var(--color-light)]">{$_('optimizer.result')}</span>
 				{#if result.converged}
-					<span class="px-2 py-0.5 text-xs font-mono bg-[var(--color-emerald)]/20 text-[var(--color-emerald)] rounded">OK</span>
+					<span class="px-2 py-0.5 text-xs font-mono bg-[var(--color-emerald)]/20 text-[var(--color-emerald)] rounded">{$_('optimizer.ok')}</span>
 				{:else}
 					<span class="px-2 py-0.5 text-xs font-mono bg-[var(--color-coral)]/20 text-[var(--color-coral)] rounded">!</span>
 				{/if}
@@ -1631,8 +1632,8 @@
 				<table class="w-full text-sm font-mono">
 					<thead>
 						<tr class="text-[var(--color-mist)]">
-							<th class="py-1.5 text-left">RANGE</th>
-							<th class="py-1.5 text-right">FREQ</th>
+							<th class="py-1.5 text-left">{$_('optimizer.range')}</th>
+							<th class="py-1.5 text-right">{$_('optimizer.freq')}</th>
 							<th class="py-1.5 text-right">RTP</th>
 						</tr>
 					</thead>
@@ -1646,7 +1647,7 @@
 						{/each}
 						{#if result.loss_result}
 							<tr class="border-t border-white/[0.02] text-[var(--color-mist)]/70">
-								<td class="py-1.5">loss</td>
+								<td class="py-1.5">{$_('optimizer.loss')}</td>
 								<td class="py-1.5 text-right">1:{formatFreq(result.loss_result.actual_frequency)}</td>
 								<td class="py-1.5 text-right">{result.loss_result.rtp_contribution ? formatPct(result.loss_result.rtp_contribution) : '0%'}</td>
 							</tr>
@@ -1668,12 +1669,12 @@
 			{#if result.brute_force_info}
 				<div class="px-3 pb-3">
 					<div class="flex items-center justify-between px-2 py-1.5 rounded bg-[var(--color-violet)]/10 text-xs font-mono">
-						<span class="text-[var(--color-violet)]">BRUTE FORCE</span>
+						<span class="text-[var(--color-violet)]">{$_('optimizer.bruteForce')}</span>
 						<div class="flex gap-4 text-[var(--color-mist)]">
-							<span>{result.brute_force_info.iterations} iter</span>
+							<span>{result.brute_force_info.iterations} {$_('optimizer.iter')}</span>
 							<span>{result.brute_force_info.search_duration}ms</span>
 							<span class="{result.brute_force_info.final_error < 0.0001 ? 'text-[var(--color-emerald)]' : 'text-[var(--color-coral)]'}">
-								{(result.brute_force_info.final_error * 100).toFixed(4)}% err
+								{(result.brute_force_info.final_error * 100).toFixed(4)}% {$_('optimizer.err')}
 							</span>
 						</div>
 					</div>
@@ -1751,6 +1752,6 @@
 
 	<!-- Legend -->
 	<div class="text-xs font-mono text-[var(--color-mist)]/80 text-center">
-		FREQ = 1 in N spins | RTP = % of target | AUTO = remaining RTP (^exp) | MAX = max win freq
+		{$_('optimizer.legendHelp')}
 	</div>
 </div>

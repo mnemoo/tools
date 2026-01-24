@@ -7,14 +7,17 @@ setup:
 
 # Development mode with hot reload
 dev:
+	@cp appicon.png build/appicon.png
 	~/go/bin/wails dev
 
 # Build production binary (requires bundled assets)
 build:
+	@cp appicon.png build/appicon.png
 	~/go/bin/wails build -tags prod
 
 # Build optimized production binary
 build-release:
+	@cp appicon.png build/appicon.png
 	~/go/bin/wails build -ldflags="-s -w" -tags prod
 
 # Generate TypeScript bindings

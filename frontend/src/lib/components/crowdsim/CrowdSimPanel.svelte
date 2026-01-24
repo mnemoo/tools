@@ -9,6 +9,7 @@
 	import BalanceDistribution from './BalanceDistribution.svelte';
 	import DrawdownAnalysis from './DrawdownAnalysis.svelte';
 	import StreakAnalysis from './StreakAnalysis.svelte';
+	import { _ } from '$lib/i18n';
 
 	let { mode }: { mode: string } = $props();
 
@@ -78,7 +79,7 @@
 	<!-- Header -->
 	<div class="flex items-center gap-3 mb-2">
 		<div class="w-1 h-6 bg-[var(--color-violet)] rounded-full"></div>
-		<h2 class="font-display text-xl text-[var(--color-light)] tracking-wider">CROWD SIMULATION</h2>
+		<h2 class="font-display text-xl text-[var(--color-light)] tracking-wider">{$_('crowdsim.title')}</h2>
 		<span class="text-xs font-mono text-[var(--color-mist)] uppercase">{mode}</span>
 	</div>
 
@@ -105,9 +106,9 @@
 					</div>
 				</div>
 
-				<h3 class="font-display text-xl text-[var(--color-light)] tracking-wider mb-2">SIMULATING</h3>
+				<h3 class="font-display text-xl text-[var(--color-light)] tracking-wider mb-2">{$_('crowdsim.simulating')}</h3>
 				<p class="text-sm font-mono text-[var(--color-mist)] mb-6">
-					{config.player_count.toLocaleString()} players × {config.spins_per_session} spins
+					{$_('crowdsim.simulatingDesc', { values: { players: config.player_count.toLocaleString(), spins: config.spins_per_session } })}
 				</p>
 
 				<!-- Progress bar -->
@@ -136,7 +137,7 @@
 					</svg>
 				</div>
 				<div>
-					<h3 class="font-display text-lg text-[var(--color-coral)] tracking-wider">SIMULATION FAILED</h3>
+					<h3 class="font-display text-lg text-[var(--color-coral)] tracking-wider">{$_('errors.simulationFailed')}</h3>
 					<p class="text-sm text-[var(--color-mist)] mt-1">{error}</p>
 				</div>
 			</div>
@@ -183,27 +184,27 @@
 			<div class="relative grid grid-cols-2 lg:grid-cols-4 gap-6">
 				<!-- PoP -->
 				<div class="text-center lg:text-left">
-					<p class="text-xs font-mono text-[var(--color-mist)] tracking-widest mb-1">PROBABILITY OF PROFIT</p>
+					<p class="text-xs font-mono text-[var(--color-mist)] tracking-widest mb-1">{$_('crowdsim.probabilityOfProfit')}</p>
 					<p class="font-display text-5xl {getPoPColor(result.final_pop)}">{(result.final_pop * 100).toFixed(1)}<span class="text-xl">%</span></p>
 					<p class="text-sm font-mono text-[var(--color-mist)] mt-1">
-						{Math.round(result.final_pop * result.config.player_count)} / {result.config.player_count} profitable
+						{$_('crowdsim.profitable', { values: { count: Math.round(result.final_pop * result.config.player_count), total: result.config.player_count } })}
 					</p>
 				</div>
 
 				<!-- RTP -->
 				<div class="text-center lg:text-left">
-					<p class="text-xs font-mono text-[var(--color-mist)] tracking-widest mb-1">ACTUAL RTP</p>
+					<p class="text-xs font-mono text-[var(--color-mist)] tracking-widest mb-1">{$_('crowdsim.actualRtp')}</p>
 					<p class="font-display text-5xl text-[var(--color-cyan)]">{(result.actual_rtp * 100).toFixed(2)}<span class="text-xl">%</span></p>
 					<p class="text-sm font-mono mt-1 {Math.abs(result.rtp_deviation) <= 0.005 ? 'text-[var(--color-emerald)]' : Math.abs(result.rtp_deviation) <= 0.01 ? 'text-[var(--color-gold)]' : 'text-[var(--color-coral)]'}">
-						{result.rtp_deviation >= 0 ? '+' : ''}{(result.rtp_deviation * 100).toFixed(3)}% deviation
+						{$_('crowdsim.deviation', { values: { value: (result.rtp_deviation >= 0 ? '+' : '') + (result.rtp_deviation * 100).toFixed(3) } })}
 					</p>
 				</div>
 
 				<!-- Volatility -->
 				<div class="text-center lg:text-left">
-					<p class="text-xs font-mono text-[var(--color-mist)] tracking-widest mb-1">VOLATILITY PROFILE</p>
+					<p class="text-xs font-mono text-[var(--color-mist)] tracking-widest mb-1">{$_('crowdsim.volatilityProfile')}</p>
 					<p class="font-display text-5xl {volInfo.textClass}">{volInfo.label}</p>
-					<p class="text-sm font-mono text-[var(--color-mist)] mt-1">Score: {result.composite_score.toFixed(3)}</p>
+					<p class="text-sm font-mono text-[var(--color-mist)] mt-1">{$_('crowdsim.score', { values: { value: result.composite_score.toFixed(3) } })}</p>
 				</div>
 
 				<!-- Breakeven Rate (for bonus modes) or Duration -->
@@ -212,20 +213,20 @@
 					{@const brDev = result.mode_info.breakeven_rate_deviation}
 					{@const brColorClass = br >= 0.5 ? 'text-[var(--color-emerald)]' : br >= 0.3 ? 'text-[var(--color-gold)]' : br >= 0.15 ? 'text-orange-400' : 'text-[var(--color-coral)]'}
 					<div class="text-center lg:text-left">
-						<p class="text-xs font-mono text-[var(--color-mist)] tracking-widest mb-1">BREAKEVEN RATE (SIM)</p>
+						<p class="text-xs font-mono text-[var(--color-mist)] tracking-widest mb-1">{$_('crowdsim.breakevenRateSim')}</p>
 						<p class="font-display text-5xl {brColorClass}">{(br * 100).toFixed(1)}<span class="text-xl">%</span></p>
 						<p class="text-sm font-mono mt-1 {Math.abs(brDev) <= 0.005 ? 'text-[var(--color-emerald)]' : Math.abs(brDev) <= 0.01 ? 'text-[var(--color-gold)]' : 'text-[var(--color-coral)]'}">
-							{brDev >= 0 ? '+' : ''}{(brDev * 100).toFixed(2)}% vs theoretical
+							{$_('crowdsim.vsTheoretical', { values: { value: (brDev >= 0 ? '+' : '') + (brDev * 100).toFixed(2) } })}
 						</p>
 					</div>
 				{:else}
 					<div class="text-center lg:text-left">
-						<p class="text-xs font-mono text-[var(--color-mist)] tracking-widest mb-1">SIMULATION TIME</p>
+						<p class="text-xs font-mono text-[var(--color-mist)] tracking-widest mb-1">{$_('crowdsim.simulationTime')}</p>
 						<p class="font-display text-5xl text-[var(--color-violet)]">
 							{result.duration_ms < 1000 ? result.duration_ms : (result.duration_ms / 1000).toFixed(2)}<span class="text-xl">{result.duration_ms < 1000 ? 'ms' : 's'}</span>
 						</p>
 						<p class="text-sm font-mono text-[var(--color-mist)] mt-1">
-							{(result.config.player_count * result.config.spins_per_session).toLocaleString()} total spins
+							{$_('crowdsim.totalSpins', { values: { count: (result.config.player_count * result.config.spins_per_session).toLocaleString() } })}
 						</p>
 					</div>
 				{/if}

@@ -50,6 +50,7 @@
 		]
 	},
 	"dependencies": {
-		"chart.js": "^4.5.1"
+		"chart.js": "^4.5.1",
+		"svelte-i18n": "^4.0.1"
 	}
 }

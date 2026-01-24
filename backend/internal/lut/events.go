@@ -16,9 +16,26 @@ import (
 // EventsLoader handles loading and decompressing event files (.jsonl.zst).
 type EventsLoader struct {
 	baseDir string
-	cache   map[string]*EventsIndex // mode -> events index
+	cache   map[string]*EventsIndex // mode -> events index (full load, legacy)
+	chunks  map[string]*ChunkCache  // mode -> chunk cache (lazy loading)
 	mu      sync.RWMutex            // protects cache from concurrent access
 }
+
+// ChunkCache holds cached event chunks for lazy loading.
+type ChunkCache struct {
+	Mode      string
+	FilePath  string
+	Chunks    map[int]map[int]json.RawMessage // chunkID -> (lineIndex -> event)
+	ChunkSize int                             // lines per chunk
+	MaxChunks int                             // max chunks to keep in memory
+	LRU       []int                           // chunk IDs in LRU order (oldest first)
+	mu        sync.RWMutex
+}
+
+const (
+	DefaultChunkSize = 1000 // 1000 lines per chunk
+	DefaultMaxChunks = 10   // Keep max 10 chunks in memory (~10k events)
+)
 
 // EventsIndex holds indexed events for fast lookup by sim_id.
 type EventsIndex struct {
@@ -43,6 +60,7 @@ func NewEventsLoader(baseDir string) *EventsLoader {
 	return &EventsLoader{
 		baseDir: baseDir,
 		cache:   make(map[string]*EventsIndex),
+		chunks:  make(map[string]*ChunkCache),
 	}
 }
 
@@ -286,4 +304,224 @@ func FormatOdds(probability float64) string {
 		return fmt.Sprintf("1 in %.1fK", odds/1000)
 	}
 	return fmt.Sprintf("1 in %.0f", odds)
+}
+
+// ============================================================================
+// Lazy Loading Methods - Load only what's needed, unload when done
+// ============================================================================
+
+// GetEventsRange loads events for a specific line range [startLine, endLine).
+// This streams through the file and only keeps the requested range in memory.
+// Returns a map of lineIndex -> event.
+func (e *EventsLoader) GetEventsRange(eventsFile string, startLine, endLine int) (map[int]json.RawMessage, error) {
+	filePath := filepath.Join(e.baseDir, eventsFile)
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open events file: %w", err)
+	}
+	defer file.Close()
+
+	decoder, err := zstd.NewReader(file)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create zstd decoder: %w", err)
+	}
+	defer decoder.Close()
+
+	scanner := bufio.NewScanner(decoder)
+	// Use smaller buffer for range loading (1MB instead of 10MB)
+	const maxCapacity = 1 * 1024 * 1024
+	buf := make([]byte, maxCapacity)
+	scanner.Buffer(buf, maxCapacity)
+
+	events := make(map[int]json.RawMessage)
+	lineIndex := 0
+
+	for scanner.Scan() {
+		// Skip lines before range
+		if lineIndex < startLine {
+			lineIndex++
+			continue
+		}
+		// Stop after range
+		if lineIndex >= endLine {
+			break
+		}
+
+		line := scanner.Bytes()
+		if len(line) > 0 {
+			eventCopy := make(json.RawMessage, len(line))
+			copy(eventCopy, line)
+			events[lineIndex] = eventCopy
+		}
+		lineIndex++
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("error reading events: %w", err)
+	}
+
+	return events, nil
+}
+
+// GetEventLazy gets a single event using chunk-based lazy loading.
+// It loads a chunk around the requested line and caches it.
+func (e *EventsLoader) GetEventLazy(mode, eventsFile string, lineIndex int, simIDOffset int) (json.RawMessage, error) {
+	// First check if we have it in full cache (legacy)
+	e.mu.RLock()
+	if index, ok := e.findModeLocked(mode); ok {
+		eventIdx := lineIndex - simIDOffset
+		if event, ok := index.Events[eventIdx]; ok {
+			e.mu.RUnlock()
+			return event, nil
+		}
+	}
+	e.mu.RUnlock()
+
+	// Use chunk cache for lazy loading
+	cache := e.getOrCreateChunkCache(mode, eventsFile)
+
+	chunkID := lineIndex / cache.ChunkSize
+	eventIdx := lineIndex - simIDOffset
+
+	// Check if chunk is cached
+	cache.mu.RLock()
+	if chunk, ok := cache.Chunks[chunkID]; ok {
+		if event, ok := chunk[eventIdx]; ok {
+			cache.mu.RUnlock()
+			cache.touchChunk(chunkID)
+			return event, nil
+		}
+	}
+	cache.mu.RUnlock()
+
+	// Load the chunk
+	startLine := chunkID * cache.ChunkSize
+	endLine := startLine + cache.ChunkSize
+
+	events, err := e.GetEventsRange(eventsFile, startLine, endLine)
+	if err != nil {
+		return nil, err
+	}
+
+	// Store in cache
+	cache.mu.Lock()
+	cache.Chunks[chunkID] = events
+	cache.touchChunkLocked(chunkID)
+	cache.evictIfNeededLocked()
+	cache.mu.Unlock()
+
+	// Return requested event
+	if event, ok := events[eventIdx]; ok {
+		return event, nil
+	}
+	return nil, fmt.Errorf("event at line %d not found", lineIndex)
+}
+
+// getOrCreateChunkCache returns or creates a chunk cache for a mode.
+func (e *EventsLoader) getOrCreateChunkCache(mode, eventsFile string) *ChunkCache {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	modeLower := strings.ToLower(mode)
+	if cache, ok := e.chunks[modeLower]; ok {
+		return cache
+	}
+
+	cache := &ChunkCache{
+		Mode:      mode,
+		FilePath:  filepath.Join(e.baseDir, eventsFile),
+		Chunks:    make(map[int]map[int]json.RawMessage),
+		ChunkSize: DefaultChunkSize,
+		MaxChunks: DefaultMaxChunks,
+		LRU:       make([]int, 0),
+	}
+	e.chunks[modeLower] = cache
+	return cache
+}
+
+// touchChunk moves a chunk to the end of LRU (most recently used).
+func (c *ChunkCache) touchChunk(chunkID int) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.touchChunkLocked(chunkID)
+}
+
+func (c *ChunkCache) touchChunkLocked(chunkID int) {
+	// Remove from current position
+	for i, id := range c.LRU {
+		if id == chunkID {
+			c.LRU = append(c.LRU[:i], c.LRU[i+1:]...)
+			break
+		}
+	}
+	// Add to end (most recent)
+	c.LRU = append(c.LRU, chunkID)
+}
+
+// evictIfNeededLocked removes oldest chunks if over limit.
+// Caller must hold c.mu.Lock().
+func (c *ChunkCache) evictIfNeededLocked() {
+	for len(c.LRU) > c.MaxChunks {
+		oldestID := c.LRU[0]
+		c.LRU = c.LRU[1:]
+		delete(c.Chunks, oldestID)
+	}
+}
+
+// UnloadMode removes all cached events for a mode (both full and chunks).
+func (e *EventsLoader) UnloadMode(mode string) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	modeLower := strings.ToLower(mode)
+
+	// Clear full cache
+	for name := range e.cache {
+		if strings.ToLower(name) == modeLower {
+			delete(e.cache, name)
+			break
+		}
+	}
+
+	// Clear chunk cache
+	delete(e.chunks, modeLower)
+}
+
+// UnloadAll removes all cached events.
+func (e *EventsLoader) UnloadAll() {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	e.cache = make(map[string]*EventsIndex)
+	e.chunks = make(map[string]*ChunkCache)
+}
+
+// GetChunkCacheStats returns stats about chunk cache for debugging.
+func (e *EventsLoader) GetChunkCacheStats(mode string) map[string]interface{} {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
+	modeLower := strings.ToLower(mode)
+	cache, ok := e.chunks[modeLower]
+	if !ok {
+		return nil
+	}
+
+	cache.mu.RLock()
+	defer cache.mu.RUnlock()
+
+	totalEvents := 0
+	for _, chunk := range cache.Chunks {
+		totalEvents += len(chunk)
+	}
+
+	return map[string]interface{}{
+		"mode":         cache.Mode,
+		"chunks":       len(cache.Chunks),
+		"max_chunks":   cache.MaxChunks,
+		"chunk_size":   cache.ChunkSize,
+		"total_events": totalEvents,
+		"lru_order":    cache.LRU,
+	}
 }

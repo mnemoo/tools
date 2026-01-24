@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { _ } from '$lib/i18n';
+
 	let {
 		popCurve,
 		initialBalance = 100
@@ -63,8 +65,8 @@
 <div class="rounded-2xl bg-[var(--color-graphite)]/50 border border-white/[0.03] p-5">
 	<div class="flex items-center gap-3 mb-4">
 		<div class="w-1 h-5 bg-[var(--color-violet)] rounded-full"></div>
-		<h3 class="font-mono text-sm text-[var(--color-light)]">PROBABILITY OF PROFIT</h3>
-		<span class="ml-auto text-xs font-mono text-[var(--color-mist)]">Over Time</span>
+		<h3 class="font-mono text-sm text-[var(--color-light)]">{$_('crowdsim.probabilityOfProfit')}</h3>
+		<span class="ml-auto text-xs font-mono text-[var(--color-mist)]">{$_('crowdsim.overTime')}</span>
 	</div>
 
 	<svg viewBox="0 0 {width} {height}" class="w-full">
@@ -176,7 +178,7 @@
 			text-anchor="middle"
 			class="fill-[var(--color-mist)] text-xs font-mono"
 		>
-			Spin Number
+			{$_('crowdsim.spinNumber')}
 		</text>
 
 		<!-- Final value marker -->
@@ -202,11 +204,11 @@
 	<div class="mt-4 flex items-center justify-center gap-6 text-xs font-mono text-[var(--color-mist)]">
 		<div class="flex items-center gap-2">
 			<div class="h-0.5 w-5 rounded bg-[var(--color-violet)]"></div>
-			<span>PoP Curve</span>
+			<span>{$_('crowdsim.popCurve')}</span>
 		</div>
 		<div class="flex items-center gap-2">
 			<div class="h-0.5 w-5 rounded bg-[var(--color-gold)] opacity-60" style="background: repeating-linear-gradient(90deg, var(--color-gold) 0, var(--color-gold) 4px, transparent 4px, transparent 8px);"></div>
-			<span>50% Break-even</span>
+			<span>{$_('crowdsim.breakeven50')}</span>
 		</div>
 	</div>
 </div>

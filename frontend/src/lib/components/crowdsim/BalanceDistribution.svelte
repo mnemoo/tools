@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { CrowdSimBalanceStats } from '$lib/api/types';
+	import { _ } from '$lib/i18n';
 
 	let {
 		stats,
@@ -87,15 +88,15 @@
 			<div class="flex items-center gap-3">
 				<div class="w-1 h-5 bg-[var(--color-gold)] rounded-full"></div>
 				<div>
-					<h3 class="font-mono text-sm text-[var(--color-light)]">FINAL BALANCE DISTRIBUTION</h3>
-					<p class="text-xs font-mono text-[var(--color-mist)]">{totalPlayers.toLocaleString()} players analyzed</p>
+					<h3 class="font-mono text-sm text-[var(--color-light)]">{$_('crowdsim.finalBalanceDistribution')}</h3>
+					<p class="text-xs font-mono text-[var(--color-mist)]">{$_('crowdsim.playersAnalyzed', { values: { count: totalPlayers.toLocaleString() } })}</p>
 				</div>
 			</div>
 
 			<!-- Quick Stats -->
 			<div class="flex items-center gap-4">
 				<div class="text-right">
-					<div class="text-[10px] font-mono text-[var(--color-mist)]">PROFITABLE</div>
+					<div class="text-[10px] font-mono text-[var(--color-mist)]">{$_('crowdsim.profitableLabel')}</div>
 					<div class="flex items-baseline gap-1">
 						<span class="font-display text-xl text-[var(--color-emerald)]">{profitPercent.toFixed(1)}</span>
 						<span class="text-xs text-[var(--color-emerald)]">%</span>
@@ -103,7 +104,7 @@
 				</div>
 				<div class="w-px h-8 bg-white/[0.05]"></div>
 				<div class="text-right">
-					<div class="text-[10px] font-mono text-[var(--color-mist)]">AT LOSS</div>
+					<div class="text-[10px] font-mono text-[var(--color-mist)]">{$_('crowdsim.atLoss')}</div>
 					<div class="flex items-baseline gap-1">
 						<span class="font-display text-xl text-[var(--color-coral)]">{(100 - profitPercent).toFixed(1)}</span>
 						<span class="text-xs text-[var(--color-coral)]">%</span>
@@ -112,7 +113,7 @@
 				{#if bustedPlayers > 0}
 					<div class="w-px h-8 bg-white/[0.05]"></div>
 					<div class="text-right">
-						<div class="text-[10px] font-mono text-[var(--color-mist)]">BUSTED</div>
+						<div class="text-[10px] font-mono text-[var(--color-mist)]">{$_('crowdsim.busted')}</div>
 						<div class="flex items-baseline gap-1">
 							<span class="font-display text-xl text-red-500">{bustedPercent.toFixed(1)}</span>
 							<span class="text-xs text-red-500">%</span>
@@ -168,7 +169,7 @@
 									{bustedPercent.toFixed(1)}%
 								</span>
 								<span class="{widthPercent > 40 ? 'text-white/40' : 'text-red-400/50'} ml-1.5 text-[10px]">
-									BUSTED
+									{$_('crowdsim.busted')}
 								</span>
 							</div>
 						</div>
@@ -224,16 +225,16 @@
 			<div class="mt-4 flex items-center justify-center gap-4 text-xs font-mono flex-wrap">
 				<div class="flex items-center gap-1.5">
 					<div class="w-3 h-3 rounded bg-[var(--color-emerald)]/60"></div>
-					<span class="text-[var(--color-mist)]">Profit</span>
+					<span class="text-[var(--color-mist)]">{$_('crowdsim.profit')}</span>
 				</div>
 				<div class="flex items-center gap-1.5">
 					<div class="w-3 h-3 rounded bg-[var(--color-coral)]/60"></div>
-					<span class="text-[var(--color-mist)]">Loss</span>
+					<span class="text-[var(--color-mist)]">{$_('crowdsim.loss')}</span>
 				</div>
 				{#if bustedPlayers > 0}
 					<div class="flex items-center gap-1.5">
 						<div class="w-3 h-3 rounded bg-red-500/60"></div>
-						<span class="text-[var(--color-mist)]">Busted</span>
+						<span class="text-[var(--color-mist)]">{$_('crowdsim.busted')}</span>
 					</div>
 				{/if}
 			</div>
@@ -244,7 +245,7 @@
 						<path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75z" />
 					</svg>
 				</div>
-				<p class="text-[var(--color-mist)]">No distribution data available</p>
+				<p class="text-[var(--color-mist)]">{$_('status.noData')}</p>
 			</div>
 		{/if}
 	</div>
@@ -257,7 +258,7 @@
 					<svg class="w-4 h-4 text-[var(--color-violet)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
 					</svg>
-					<span class="text-xs font-mono text-[var(--color-mist)]">BALANCE PERCENTILES</span>
+					<span class="text-xs font-mono text-[var(--color-mist)]">{$_('crowdsim.balancePercentiles')}</span>
 				</div>
 
 				<!-- Percentile Cards -->
@@ -295,19 +296,19 @@
 				<div class="mt-4 pt-3 border-t border-white/[0.03] flex items-center justify-center gap-6 text-[10px] font-mono text-[var(--color-mist)]">
 					<div class="flex items-center gap-1.5">
 						<div class="w-2 h-2 rounded-sm bg-[var(--color-emerald)]"></div>
-						<span>≥ Initial ({initialBalance})</span>
+						<span>{$_('crowdsim.aboveInitial', { values: { value: initialBalance } })}</span>
 					</div>
 					<div class="flex items-center gap-1.5">
 						<div class="w-2 h-2 rounded-sm bg-[var(--color-gold)]"></div>
-						<span>50-100%</span>
+						<span>{$_('crowdsim.halfToFull')}</span>
 					</div>
 					<div class="flex items-center gap-1.5">
 						<div class="w-2 h-2 rounded-sm bg-[var(--color-coral)]"></div>
-						<span>&lt; 50%</span>
+						<span>{$_('crowdsim.belowHalf')}</span>
 					</div>
 					<div class="flex items-center gap-1.5">
 						<div class="w-2 h-2 rounded-sm bg-red-500"></div>
-						<span>&lt; 0 (Busted)</span>
+						<span>{$_('crowdsim.belowZero')}</span>
 					</div>
 				</div>
 			</div>

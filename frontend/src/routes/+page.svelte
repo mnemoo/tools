@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { api, type IndexInfo, type Statistics, type CompareItem } from '$lib/api';
+	import { api, type IndexInfo, type Statistics, type CompareItem, type AllModesComplianceResult } from '$lib/api';
+	import { _ } from '$lib/i18n';
 	import {
 		PayoutBuckets,
 		TopPayouts,
@@ -11,9 +12,11 @@
 		CrowdSimPanel,
 		BooksLoadingPanel,
 		LGSPanel,
+		EventViewerPanel,
 		OptimizerPanel,
 		// ConvexOptimizerPanel, // TODO: temporarily disabled, will be enabled later
-		WelcomeModal
+		WelcomeModal,
+		LanguageSelector
 	} from '$lib/components';
 
 	// Certificate check state
@@ -25,6 +28,8 @@
 	let selectedMode = $state<string | null>(null);
 	let stats = $state<Statistics | null>(null);
 	let compareItems = $state<CompareItem[]>([]);
+	let complianceData = $state<AllModesComplianceResult | null>(null);
+	let expandedComplianceMode = $state<string | null>(null);
 
 	let loading = $state(true);
 	let statsLoading = $state(false);
@@ -36,8 +41,8 @@
 
 	// Active panel for detailed view
 	// Note: 'convexopt' temporarily disabled, will be enabled later
-	type PanelType = 'overview' | 'distribution' | 'compliance' | 'crowdsim' | 'optimizer' | 'lgs';
-	const validPanels: PanelType[] = ['overview', 'distribution', 'compliance', 'crowdsim', 'optimizer', 'lgs'];
+	type PanelType = 'overview' | 'distribution' | 'compliance' | 'crowdsim' | 'optimizer' | 'lgs' | 'events';
+	const validPanels: PanelType[] = ['overview', 'distribution', 'compliance', 'crowdsim', 'optimizer', 'lgs', 'events'];
 	let activePanel = $state<PanelType>('overview');
 
 	// Hash-based navigation
@@ -84,6 +89,11 @@
 				indexInfo = await api.getIndex();
 				const comparison = await api.compare();
 				compareItems = comparison.modes;
+
+				// Load compliance data in background
+				api.getAllCompliance().then(data => {
+					complianceData = data;
+				}).catch(e => console.error('Failed to load compliance:', e));
 
 				if (indexInfo.modes.length > 0) {
 					await selectMode(indexInfo.modes[0].mode);
@@ -169,6 +179,21 @@
 	};
 
 	// Simple volatility label for mode cards (no breakeven data available)
+	// Navigate to compliance tab and expand specific mode
+	function goToCompliance(mode: string, event: MouseEvent) {
+		event.stopPropagation(); // Don't trigger the mode selection
+		expandedComplianceMode = mode;
+		setPanel('compliance');
+	}
+
+	// Get compliance status for a mode
+	function getModeComplianceStatus(mode: string): { passed: boolean; hasData: boolean } {
+		if (!complianceData?.mode_results) return { passed: false, hasData: false };
+		const result = complianceData.mode_results[mode];
+		if (!result) return { passed: false, hasData: false };
+		return { passed: result.passed, hasData: true };
+	}
+
 	function getVolatilityLabel(vol: number, cost: number): { label: string; color: string } {
 		// For bonus modes, show "BONUS" badge instead of misleading volatility
 		if (cost > 1) {
@@ -215,18 +240,19 @@
 	// Tab configuration
 	// Note: 'convexopt' tab temporarily disabled, will be enabled later
 	const tabs = [
-		{ id: 'overview', label: 'OVERVIEW', icon: 'grid', badge: null },
-		{ id: 'distribution', label: 'DISTRIBUTION', icon: 'chart', badge: null },
-		{ id: 'compliance', label: 'COMPLIANCE', icon: 'shield', badge: null },
-		{ id: 'crowdsim', label: 'CROWD SIM', icon: 'users', badge: null },
-		{ id: 'optimizer', label: 'OPTIMIZER', icon: 'bolt', badge: 'beta' },
-		// { id: 'convexopt', label: 'CONVEX', icon: 'puzzle', badge: 'new' },
-		{ id: 'lgs', label: 'LGS', icon: 'server', badge: null }
+		{ id: 'overview', labelKey: 'nav.overview', icon: 'grid', badge: null },
+		{ id: 'distribution', labelKey: 'nav.distribution', icon: 'chart', badge: null },
+		{ id: 'compliance', labelKey: 'nav.compliance', icon: 'shield', badge: null },
+		{ id: 'events', labelKey: 'nav.events', icon: 'eye', badge: null },
+		{ id: 'crowdsim', labelKey: 'nav.crowdsim', icon: 'users', badge: null },
+		{ id: 'optimizer', labelKey: 'nav.optimizer', icon: 'bolt', badge: 'beta' },
+		// { id: 'convexopt', labelKey: 'nav.convex', icon: 'puzzle', badge: 'new' },
+		{ id: 'lgs', labelKey: 'nav.lgs', icon: 'server', badge: null },
 	] as const;
 </script>
 
 <svelte:head>
-	<title>Mnemoo Tools</title>
+	<title>{$_('app.title')}</title>
 </svelte:head>
 
 <!-- Main Container -->
@@ -260,8 +286,8 @@
 
 						</div>
 						<div>
-							<h1 class="font-display text-2xl text-[var(--color-light)] tracking-wider">Mnemoo Tools</h1>
-							<p class="text-xs text-[var(--color-mist)] font-mono tracking-widest">LOOKUP TABLE EXPLORER</p>
+							<h1 class="font-display text-2xl text-[var(--color-light)] tracking-wider">{$_('app.title')}</h1>
+							<p class="text-xs text-[var(--color-mist)] font-mono tracking-widest">{$_('app.subtitle')}</p>
 						</div>
 					</div>
 
@@ -270,7 +296,7 @@
 						<div class="flex items-center gap-3">
 							<div class="px-3 py-1.5 rounded-lg data-cell">
 								<span class="text-xs font-mono text-[var(--color-mist)]">
-									<span class="text-[var(--color-cyan)]">{indexInfo.modes.length}</span> MODES
+									<span class="text-[var(--color-cyan)]">{indexInfo.modes.length}</span> {$_('common.modes')}
 								</span>
 							</div>
 							<button
@@ -289,8 +315,9 @@
 										<path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
 									</svg>
 								{/if}
-								RELOAD
+								{$_('buttons.reload')}
 							</button>
+							<LanguageSelector />
 						</div>
 					{/if}
 				</div>
@@ -309,8 +336,8 @@
 						<div class="absolute inset-2 rounded-full border border-transparent border-b-[var(--color-violet)] animate-spin" style="animation-direction: reverse; animation-duration: 1.5s;"></div>
 					</div>
 					<div class="text-center">
-						<p class="font-display text-xl text-[var(--color-light)] tracking-wider">INITIALIZING</p>
-						<p class="text-xs font-mono text-[var(--color-mist)] mt-2">Loading analysis data...</p>
+						<p class="font-display text-xl text-[var(--color-light)] tracking-wider">{$_('status.initializing')}</p>
+						<p class="text-xs font-mono text-[var(--color-mist)] mt-2">{$_('status.loadingAnalysisData')}</p>
 					</div>
 				</div>
 			{:else if error}
@@ -322,7 +349,7 @@
 								<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
 							</svg>
 						</div>
-						<h2 class="font-display text-2xl text-[var(--color-coral)] tracking-wider mb-3">CONNECTION FAILED</h2>
+						<h2 class="font-display text-2xl text-[var(--color-coral)] tracking-wider mb-3">{$_('status.connectionFailed')}</h2>
 						<p class="text-[var(--color-mist)] mb-6">{error}</p>
 						<div class="inline-block px-4 py-2 rounded-lg data-cell">
 							<code class="font-mono text-sm text-[var(--color-light)]">localhost:7755</code>
@@ -335,9 +362,9 @@
 					<div class="flex items-center justify-between mb-5">
 						<div class="flex items-center gap-3">
 							<div class="w-1 h-6 bg-[var(--color-cyan)] rounded-full"></div>
-							<h2 class="font-display text-xl text-[var(--color-light)] tracking-wider">GAME MODES</h2>
+							<h2 class="font-display text-xl text-[var(--color-light)] tracking-wider">{$_('gameModes.title')}</h2>
 						</div>
-						<span class="text-xs font-mono text-[var(--color-mist)]">SELECT MODE TO ANALYZE</span>
+						<span class="text-xs font-mono text-[var(--color-mist)]">{$_('gameModes.selectToAnalyze')}</span>
 					</div>
 
 					<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
@@ -345,31 +372,56 @@
 							{@const isSelected = selectedMode === mode.mode}
 							{@const modeVol = compareItems.find(c => c.mode === mode.mode)?.volatility ?? 5}
 							{@const volLabel = getVolatilityLabel(modeVol, mode.cost)}
+							{@const compliance = getModeComplianceStatus(mode.mode)}
 							<button
 								class="mode-btn text-left group {isSelected ? 'active' : ''}"
 								onclick={() => selectMode(mode.mode)}
 								style="animation-delay: {i * 50}ms"
 							>
 								<div class="flex items-center justify-between mb-3">
-									<span class="font-display text-lg text-[var(--color-light)] tracking-wide uppercase">{mode.mode}</span>
+									<div class="flex items-center gap-2">
+										<span class="font-display text-lg text-[var(--color-light)] tracking-wide uppercase">{mode.mode}</span>
+										<!-- Compliance indicator -->
+										{#if compliance.hasData}
+											<!-- svelte-ignore a11y_no_static_element_interactions -->
+											<span
+												class="compliance-indicator {compliance.passed ? 'passed' : 'failed'}"
+												role="button"
+												tabindex="0"
+												onclick={(e) => goToCompliance(mode.mode, e)}
+												onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') goToCompliance(mode.mode, e); }}
+												title={compliance.passed ? 'Compliance passed' : 'Compliance issues found'}
+											>
+												{#if compliance.passed}
+													<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+														<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+													</svg>
+												{:else}
+													<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+														<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+													</svg>
+												{/if}
+											</span>
+										{/if}
+									</div>
 									<span class="badge badge-{volLabel.color} text-[10px]">{volLabel.label}</span>
 								</div>
 
 								<div class="grid grid-cols-2 gap-x-4 gap-y-2 text-xs font-mono">
 									<div class="flex justify-between">
-										<span class="text-[var(--color-mist)]">RTP</span>
+										<span class="text-[var(--color-mist)]">{$_('metrics.rtp')}</span>
 										<span class="text-[var(--color-emerald)]">{formatPercent(mode.rtp)}</span>
 									</div>
 									<div class="flex justify-between">
-										<span class="text-[var(--color-mist)]">HIT</span>
+										<span class="text-[var(--color-mist)]">{$_('gameModes.hit')}</span>
 										<span class="text-[var(--color-cyan)]">{formatPercent(mode.hit_rate)}</span>
 									</div>
 									<div class="flex justify-between">
-										<span class="text-[var(--color-mist)]">MAX</span>
+										<span class="text-[var(--color-mist)]">{$_('gameModes.max')}</span>
 										<span class="text-[var(--color-gold)]">{formatMultiplier(mode.max_payout)}</span>
 									</div>
 									<div class="flex justify-between">
-										<span class="text-[var(--color-mist)]">COST</span>
+										<span class="text-[var(--color-mist)]">{$_('metrics.cost')}</span>
 										<span class="text-[var(--color-light)]">{mode.cost}x</span>
 									</div>
 								</div>
@@ -399,7 +451,7 @@
 										</svg>
 									</div>
 									<div class="min-w-0">
-										<p class="text-[10px] font-mono text-[var(--color-emerald)] tracking-widest">RTP</p>
+										<p class="text-[10px] font-mono text-[var(--color-emerald)] tracking-widest">{$_('metrics.rtp')}</p>
 										<p class="font-display text-2xl text-[var(--color-light)] leading-tight">{(stats.rtp * 100).toFixed(2)}<span class="text-sm text-[var(--color-mist)]">%</span></p>
 									</div>
 								</div>
@@ -416,7 +468,7 @@
 										</svg>
 									</div>
 									<div class="min-w-0">
-										<p class="text-[10px] font-mono text-[var(--color-cyan)] tracking-widest">HIT RATE</p>
+										<p class="text-[10px] font-mono text-[var(--color-cyan)] tracking-widest">{$_('metrics.hitRate')}</p>
 										<p class="font-display text-2xl text-[var(--color-light)] leading-tight">{(stats.hit_rate * 100).toFixed(2)}<span class="text-sm text-[var(--color-mist)]">%</span></p>
 									</div>
 								</div>
@@ -432,7 +484,7 @@
 										</svg>
 									</div>
 									<div class="min-w-0">
-										<p class="text-[10px] font-mono text-[var(--color-gold)] tracking-widest">MAX WIN</p>
+										<p class="text-[10px] font-mono text-[var(--color-gold)] tracking-widest">{$_('metrics.maxWin')}</p>
 										<p class="font-display text-2xl text-[var(--color-light)] leading-tight">{stats.max_payout.toFixed(0)}<span class="text-sm text-[var(--color-mist)]">x</span></p>
 									</div>
 								</div>
@@ -446,7 +498,7 @@
 										<div class="flex items-center justify-between mb-2">
 											<div>
 												<p class="text-[10px] font-mono {volatilityInfo.textClass} tracking-widest">
-													{volatilityInfo.isBonusMode ? 'VOLATILITY (cost-adj)' : 'VOLATILITY'}
+													{volatilityInfo.isBonusMode ? $_('metrics.volatilityCostAdj') : $_('metrics.volatility')}
 												</p>
 												<p class="font-display text-2xl text-[var(--color-light)] leading-tight">{volatilityInfo.displayValue.toFixed(2)}</p>
 											</div>
@@ -455,7 +507,7 @@
 										{#if volatilityInfo.isBonusMode && volatilityInfo.breakevenRate !== undefined}
 											<!-- Breakeven rate for bonus modes -->
 											<div class="flex items-center justify-between text-xs mb-2">
-												<span class="text-[var(--color-mist)]">Breakeven rate</span>
+												<span class="text-[var(--color-mist)]">{$_('metrics.breakevenRate')}</span>
 												<span class="{volatilityInfo.textClass} font-mono">{(volatilityInfo.breakevenRate * 100).toFixed(1)}%</span>
 											</div>
 										{/if}
@@ -483,7 +535,7 @@
 									class="tab-btn {isActive ? 'active' : ''}"
 									onclick={() => setPanel(tab.id)}
 								>
-									<span class="font-mono text-xs tracking-wider">{tab.label}</span>
+									<span class="font-mono text-xs tracking-wider">{$_(tab.labelKey)}</span>
 									{#if tab.badge}
 										<span class="ml-1.5 px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">{tab.badge}</span>
 									{/if}
@@ -500,45 +552,45 @@
 								<div class="glass-panel rounded-2xl p-6">
 									<div class="flex items-center gap-3 mb-6">
 										<div class="w-1 h-5 bg-[var(--color-violet)] rounded-full"></div>
-										<h3 class="font-display text-lg text-[var(--color-light)] tracking-wider">DETAILED METRICS</h3>
+										<h3 class="font-display text-lg text-[var(--color-light)] tracking-wider">{$_('detailedMetrics.title')}</h3>
 									</div>
 									<div class="grid grid-cols-3 gap-3">
 										<div class="data-cell rounded-xl p-4">
-											<div class="text-xs font-mono text-[var(--color-mist)] mb-1">OUTCOMES</div>
+											<div class="text-xs font-mono text-[var(--color-mist)] mb-1">{$_('metrics.outcomes')}</div>
 											<div class="font-mono text-xl text-[var(--color-light)]">{stats.total_outcomes.toLocaleString()}</div>
 										</div>
 										<div class="data-cell rounded-xl p-4">
-											<div class="text-xs font-mono text-[var(--color-mist)] mb-1">ZERO RATE</div>
+											<div class="text-xs font-mono text-[var(--color-mist)] mb-1">{$_('metrics.zeroRate')}</div>
 											<div class="font-mono text-xl text-[var(--color-coral)]">{(stats.zero_payout_rate * 100).toFixed(2)}%</div>
 										</div>
 										<div class="data-cell rounded-xl p-4">
-											<div class="text-xs font-mono text-[var(--color-mist)] mb-1">MEAN</div>
+											<div class="text-xs font-mono text-[var(--color-mist)] mb-1">{$_('metrics.mean')}</div>
 											<div class="font-mono text-xl text-[var(--color-violet)]">{stats.mean_payout.toFixed(2)}x</div>
 										</div>
 										<div class="data-cell rounded-xl p-4">
-											<div class="text-xs font-mono text-[var(--color-mist)] mb-1">MEDIAN</div>
+											<div class="text-xs font-mono text-[var(--color-mist)] mb-1">{$_('metrics.median')}</div>
 											<div class="font-mono text-xl text-[var(--color-violet)]">{stats.median_payout.toFixed(2)}x</div>
 										</div>
 										<div class="data-cell rounded-xl p-4">
-											<div class="text-xs font-mono text-[var(--color-mist)] mb-1">STD DEV</div>
+											<div class="text-xs font-mono text-[var(--color-mist)] mb-1">{$_('metrics.stdDev')}</div>
 											<div class="font-mono text-xl text-[var(--color-gold)]">{stats.std_dev.toFixed(4)}</div>
 										</div>
 										<div class="data-cell rounded-xl p-4">
-											<div class="text-xs font-mono text-[var(--color-mist)] mb-1">MIN</div>
+											<div class="text-xs font-mono text-[var(--color-mist)] mb-1">{$_('metrics.min')}</div>
 											<div class="font-mono text-xl text-[var(--color-mist)]">{stats.min_payout.toFixed(2)}x</div>
 										</div>
 										{#if stats.cost > 1}
 											<!-- Cost-adjusted metrics for bonus modes -->
 											<div class="data-cell rounded-xl p-4 border border-[var(--color-gold)]/20">
-												<div class="text-xs font-mono text-[var(--color-gold)] mb-1">COST</div>
+												<div class="text-xs font-mono text-[var(--color-gold)] mb-1">{$_('metrics.cost')}</div>
 												<div class="font-mono text-xl text-[var(--color-gold)]">{stats.cost.toFixed(0)}x</div>
 											</div>
 											<div class="data-cell rounded-xl p-4 border border-[var(--color-gold)]/20">
-												<div class="text-xs font-mono text-[var(--color-gold)] mb-1">BREAKEVEN</div>
+												<div class="text-xs font-mono text-[var(--color-gold)] mb-1">{$_('metrics.breakeven')}</div>
 												<div class="font-mono text-xl {stats.breakeven_rate >= 0.3 ? 'text-[var(--color-emerald)]' : stats.breakeven_rate >= 0.15 ? 'text-[var(--color-gold)]' : 'text-[var(--color-coral)]'}">{(stats.breakeven_rate * 100).toFixed(1)}%</div>
 											</div>
 											<div class="data-cell rounded-xl p-4 border border-[var(--color-gold)]/20">
-												<div class="text-xs font-mono text-[var(--color-gold)] mb-1">EV vs COST</div>
+												<div class="text-xs font-mono text-[var(--color-gold)] mb-1">{$_('metrics.evVsCost')}</div>
 												{#if true}
 													{@const evRatio = (stats.mean_payout / stats.cost - 1) * 100}
 													<div class="font-mono text-xl {evRatio >= 0 ? 'text-[var(--color-emerald)]' : 'text-[var(--color-coral)]'}">{evRatio >= 0 ? '+' : ''}{evRatio.toFixed(1)}%</div>
@@ -581,7 +633,7 @@
 						{:else if activePanel === 'compliance'}
 							<div class="glass-panel rounded-2xl p-6">
 								{#key reloadKey}
-									<ComplianceChecklist />
+									<ComplianceChecklist expandedMode={expandedComplianceMode} />
 								{/key}
 							</div>
 						{:else if activePanel === 'crowdsim'}
@@ -597,8 +649,8 @@
 												<path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
 											</svg>
 										</div>
-										<p class="font-display text-lg text-[var(--color-mist)]">SELECT A MODE</p>
-										<p class="text-xs font-mono text-[var(--color-mist)] mt-2">Choose a game mode to run CrowdSim</p>
+										<p class="font-display text-lg text-[var(--color-mist)]">{$_('status.selectMode')}</p>
+										<p class="text-xs font-mono text-[var(--color-mist)] mt-2">{$_('status.selectModeForCrowdSim')}</p>
 									</div>
 								{/if}
 							</div>
@@ -615,8 +667,8 @@
 												<path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
 											</svg>
 										</div>
-										<p class="font-display text-lg text-[var(--color-mist)]">SELECT A MODE</p>
-										<p class="text-xs font-mono text-[var(--color-mist)] mt-2">Choose a game mode to optimize distribution</p>
+										<p class="font-display text-lg text-[var(--color-mist)]">{$_('status.selectMode')}</p>
+										<p class="text-xs font-mono text-[var(--color-mist)] mt-2">{$_('status.selectModeForOptimizer')}</p>
 									</div>
 								{/if}
 							</div>
@@ -624,6 +676,23 @@
 							{#key reloadKey}
 								<LGSPanel modes={indexInfo?.modes ?? []} />
 							{/key}
+						{:else if activePanel === 'events'}
+							<div class="glass-panel rounded-2xl p-6">
+								{#if selectedMode}
+									{#key reloadKey}
+										<EventViewerPanel mode={selectedMode} />
+									{/key}
+								{:else}
+									<div class="py-12 text-center">
+										<svg class="w-16 h-16 mx-auto text-slate-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+										</svg>
+										<p class="font-display text-lg text-[var(--color-mist)]">{$_('status.selectMode')}</p>
+										<p class="text-xs font-mono text-[var(--color-mist)] mt-2">Select a mode to view events</p>
+									</div>
+								{/if}
+							</div>
 						{/if}
 					</section>
 				{:else}
@@ -634,8 +703,8 @@
 								<path stroke-linecap="round" stroke-linejoin="round" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
 							</svg>
 						</div>
-						<h3 class="font-display text-2xl text-[var(--color-mist)] tracking-wider">SELECT A MODE</h3>
-						<p class="text-sm font-mono text-[var(--color-mist)] mt-3">Choose a game mode above to view detailed analytics</p>
+						<h3 class="font-display text-2xl text-[var(--color-mist)] tracking-wider">{$_('status.selectMode')}</h3>
+						<p class="text-sm font-mono text-[var(--color-mist)] mt-3">{$_('status.selectModeHint')}</p>
 					</div>
 				{/if}
 			{/if}
@@ -646,7 +715,7 @@
 			<div class="max-w-[1800px] mx-auto px-8 flex items-center justify-between">
 				<div class="flex items-center gap-4">
 					<div class="w-1 h-4 bg-[var(--color-cyan)]/50 rounded-full"></div>
-					<p class="text-xs font-mono text-[var(--color-mist)]">0.1.0</p>
+					<p class="text-xs font-mono text-[var(--color-mist)]">v1</p>
 				</div>
 				<div class="flex items-center gap-6">
 					<span class="text-xs font-mono text-[var(--color-mist)]">MNEMOO TOOLS</span>

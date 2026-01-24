@@ -106,6 +106,9 @@ export interface EventInfo {
 	event: unknown;
 	events_loaded: boolean;
 	event_missing?: boolean;
+	lazy_load?: boolean;      // true if event was loaded on-demand (not from full cache)
+	no_events_file?: boolean; // true if mode has no events file configured
+	error?: string;           // error message if lazy loading failed
 }
 
 // LGS (Local Game Server) types
@@ -241,10 +244,20 @@ export interface LoaderModeStatus {
 	completed_at?: number;
 }
 
+export interface MemoryEstimate {
+	compressed_bytes: number;
+	estimated_bytes: number;
+	estimated_mb: number;
+	mode_count: number;
+	decompression_ratio: number;
+}
+
 export interface LoaderStatusResponse {
 	priority: 'low' | 'high';
+	started: boolean;
 	modes: Record<string, LoaderModeStatus>;
 	ws_clients: number;
+	memory_estimate: MemoryEstimate;
 }
 
 export interface LoaderPriorityResponse {
@@ -331,12 +344,12 @@ export type ComplianceSeverity = 'error' | 'warning' | 'info';
 
 export interface ComplianceCheck {
 	id: ComplianceCheckID;
-	name: string;
-	description: string;
+	nameKey: string;
+	descriptionKey: string;
 	passed: boolean;
 	value: string;
 	expected: string;
-	reason?: string;
+	reasonKey?: string;
 	severity: ComplianceSeverity;
 	details?: unknown;
 }

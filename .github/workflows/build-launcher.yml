@@ -220,6 +220,18 @@ jobs:
         working-directory: launcher/ui
         run: pnpm install
 
+      # Copy app icon for Wails build
+      - name: Copy app icon (Unix)
+        if: runner.os != 'Windows'
+        working-directory: launcher
+        run: cp appicon.png build/appicon.png
+
+      - name: Copy app icon (Windows)
+        if: runner.os == 'Windows'
+        working-directory: launcher
+        shell: pwsh
+        run: Copy-Item "appicon.png" "build\appicon.png"
+
       # Build launcher with production tag
       - name: Build launcher (Unix)
         if: runner.os != 'Windows'

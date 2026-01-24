@@ -44,6 +44,7 @@ type Config struct {
 	LibraryPath   string `json:"libraryPath"`
 	FrontendPort  string `json:"frontendPort"`
 	AutoLoadBooks bool   `json:"autoLoadBooks"`
+	Language      string `json:"language"`
 }
 
 // WatcherStatus represents the backend watcher status
@@ -353,6 +354,33 @@ func (a *App) GetConfig() Config {
 	return a.config
 }
 
+// GetLanguage returns the current UI language
+func (a *App) GetLanguage() string {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.config.Language == "" {
+		return "en"
+	}
+	return a.config.Language
+}
+
+// SetLanguage sets the UI language and saves config
+func (a *App) SetLanguage(lang string) error {
+	// Supported languages
+	supported := map[string]bool{
+		"en": true, "ru": true, "es": true, "zh": true, "fr": true,
+		"it": true, "de": true, "ko": true, "pt": true, "el": true,
+		"tr": true, "vi": true, "th": true, "fi": true,
+	}
+	if !supported[lang] {
+		return fmt.Errorf("unsupported language: %s", lang)
+	}
+	a.mu.Lock()
+	a.config.Language = lang
+	a.mu.Unlock()
+	return a.saveConfigToFile()
+}
+
 // SetConfig updates configuration and saves to file
 func (a *App) SetConfig(config Config) error {
 	a.mu.Lock()
@@ -408,8 +436,8 @@ func (a *App) StartBackend() error {
 
 	// Build args list
 	args := []string{"-library", a.config.LibraryPath}
-	if !a.config.AutoLoadBooks {
-		args = append(args, "-no-autoload-books")
+	if a.config.AutoLoadBooks {
+		args = append(args, "-autoload-books")
 	}
 
 	if isProduction {
@@ -691,7 +719,8 @@ func (a *App) ClearLogs(source string) {
 
 // OpenMTools opens the mtools frontend in default browser
 func (a *App) OpenMTools() error {
-	url := fmt.Sprintf("http://localhost:%s", a.config.FrontendPort)
+	lang := a.GetLanguage()
+	url := fmt.Sprintf("http://localhost:%s/?lang=%s", a.config.FrontendPort, lang)
 	return openURL(url)
 }
 
@@ -701,9 +730,10 @@ func (a *App) OpenMToolsAPI() error {
 	return openURL(url)
 }
 
-// GetFrontendURL returns the frontend URL for embedding
+// GetFrontendURL returns the frontend URL for embedding (with language parameter)
 func (a *App) GetFrontendURL() string {
-	return fmt.Sprintf("http://localhost:%s", a.config.FrontendPort)
+	lang := a.GetLanguage()
+	return fmt.Sprintf("http://localhost:%s/?lang=%s", a.config.FrontendPort, lang)
 }
 
 // CheckDependencies checks for required dependencies

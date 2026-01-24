@@ -1,0 +1,69 @@
+{
+    "app": {
+        "title": "Mnemoo Tools",
+        "backend": "Backend",
+        "frontend": "Frontend"
+    },
+    "buttons": {
+        "startAll": "Start All",
+        "startAllServices": "Start All Services",
+        "stopAll": "Stop All",
+        "stop": "Stop",
+        "restart": "Restart",
+        "openBrowser": "Open in Browser",
+        "reload": "Reload",
+        "changeDir": "Change Dir",
+        "killAll": "Kill All",
+        "save": "Save",
+        "cancel": "Cancel",
+        "browse": "Browse",
+        "clear": "Clear",
+        "selectFolder": "Select Folder"
+    },
+    "settings": {
+        "title": "Settings",
+        "libraryPath": "Library Path",
+        "frontendPort": "Frontend Port",
+        "language": "Language",
+        "autoLoadBooks": "Auto-load books",
+        "autoLoadBooksLong": "Auto-load event books at startup",
+        "autoLoadBooksHint": "When disabled, books won't load automatically to prevent high CPU usage. You can manually start loading from the frontend.",
+        "autoReloadLUT": "Auto-reload LUT",
+        "dependencies": "Dependencies"
+    },
+    "logs": {
+        "title": "Logs",
+        "noLogs": "No logs yet. Start the services to see output."
+    },
+    "welcome": {
+        "title": "Welcome to Mnemoo Tools",
+        "description": "Start the services to begin using Mnemoo Tools.",
+        "selectFolder": "First, select your library folder in settings."
+    },
+    "status": {
+        "running": "Running",
+        "stopped": "Stopped",
+        "starting": "Starting...",
+        "error": "Error"
+    },
+    "errors": {
+        "portsInUse": "Ports in use:",
+        "libraryNotSet": "Library path not set."
+    },
+    "languages": {
+        "en": "English",
+        "ru": "Русский",
+        "es": "Español",
+        "zh": "中文",
+        "fr": "Français",
+        "it": "Italiano",
+        "de": "Deutsch",
+        "ko": "한국어",
+        "pt": "Português",
+        "el": "Ελληνικά",
+        "tr": "Türkçe",
+        "vi": "Tiếng Việt",
+        "th": "ไทย",
+        "fi": "Suomi"
+    }
+}

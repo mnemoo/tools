@@ -2,6 +2,7 @@
 	import { api } from '$lib/api';
 	import type {
 		LoaderModeStatus,
+		MemoryEstimate,
 		WSMessage,
 		WSLoadingProgress,
 		WSLoadingStarted,
@@ -9,6 +10,8 @@
 		WSLoadingError,
 		WSPriorityChanged
 	} from '$lib/api/types';
+	import { preloadModal } from '$lib/stores/preloadModal';
+	import { _ } from '$lib/i18n';
 
 	// State
 	let modes = $state<Record<string, LoaderModeStatus>>({});
@@ -18,6 +21,7 @@
 	let ws: WebSocket | null = null;
 	let isBoostLoading = $state(false);
 	let isStartLoading = $state(false);
+	let memoryEstimate = $state<MemoryEstimate | null>(null);
 
 	// Derived state
 	let allComplete = $derived(
@@ -178,19 +182,20 @@
 		}
 	}
 
-	// Start loading books
-	async function startLoading() {
-		isStartLoading = true;
-		try {
-			await api.loaderStart();
-			started = true;
-			// Fetch updated status
-			await fetchStatus();
-		} catch (e) {
-			console.error('Failed to start loader:', e);
-		} finally {
-			isStartLoading = false;
-		}
+	// Show preload warning modal via store (renders at root level)
+	function showPreloadModal() {
+		preloadModal.show(memoryEstimate, async () => {
+			isStartLoading = true;
+			try {
+				await api.loaderStart();
+				started = true;
+				await fetchStatus();
+			} catch (e) {
+				console.error('Failed to start loader:', e);
+			} finally {
+				isStartLoading = false;
+			}
+		});
 	}
 
 	// Fetch initial status
@@ -199,7 +204,8 @@
 			const status = await api.loaderStatus();
 			modes = status.modes;
 			priority = status.priority;
-			started = (status as any).started ?? true; // Handle new 'started' field
+			started = status.started ?? true;
+			memoryEstimate = status.memory_estimate ?? null;
 		} catch (e) {
 			console.error('Failed to fetch loader status:', e);
 		}
@@ -221,7 +227,7 @@
 <div>
 	<div class="flex items-center gap-3 mb-6">
 		<div class="w-1 h-5 rounded-full {allComplete ? 'bg-emerald-400' : 'bg-blue-400'}"></div>
-		<h3 class="font-display text-lg text-[var(--color-light)] tracking-wider">EVENT BOOKS</h3>
+		<h3 class="font-display text-lg text-[var(--color-light)] tracking-wider">{$_('books.title')}</h3>
 		<span class="text-xs font-mono text-[var(--color-mist)]">
 			({completeModes.length}/{totalModes})
 		</span>
@@ -235,29 +241,29 @@
 		{/if}
 	</div>
 
-	{#if !started && totalModes === 0}
-		<!-- Not Started State -->
-		<div class="p-4 rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-600/5 border border-amber-500/20">
+	{#if !started}
+		<!-- Lazy Loading Mode -->
+		<div class="p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-cyan-600/5 border border-emerald-500/20">
 			<div class="flex items-center gap-3">
-				<div class="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center">
-					<svg class="w-6 h-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+				<div class="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+					<svg class="w-6 h-6 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
 					</svg>
 				</div>
 				<div>
-					<div class="text-lg font-semibold text-white">Event Books Not Loaded</div>
-					<div class="text-sm text-amber-400/80">Loading disabled to prevent CPU usage</div>
+					<div class="text-lg font-semibold text-white">{$_('books.lazyEnabled')}</div>
+					<div class="text-sm text-emerald-400/80">{$_('books.lazyDesc')}</div>
 				</div>
 			</div>
 
 			<div class="mt-4 p-3 rounded-lg bg-slate-800/50 text-xs text-slate-400">
-				<p>Event books contain detailed game event data (ZSTD compressed). Loading them uses significant CPU.</p>
-				<p class="mt-1">Click the button below to start loading when you need event data.</p>
+				<p>{$_('books.lazyNote')}</p>
+				<p class="mt-1">{$_('books.lazyChunkNote')}</p>
 			</div>
 
 			<button
-				class="mt-4 w-full px-4 py-2.5 text-sm font-medium rounded-lg transition-all bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 border border-amber-500/30 disabled:opacity-50"
-				onclick={startLoading}
+				class="mt-4 w-full px-4 py-2.5 text-sm font-medium rounded-lg transition-all bg-slate-700/50 text-slate-400 hover:bg-slate-700 border border-slate-600/30 disabled:opacity-50"
+				onclick={showPreloadModal}
 				disabled={isStartLoading}
 			>
 				{#if isStartLoading}
@@ -266,16 +272,16 @@
 							<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
 							<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
 						</svg>
-						Starting...
+						{$_('books.starting')}
 					</span>
 				{:else}
-					Load Event Books
+					{$_('books.preloadAll')}
 				{/if}
 			</button>
 		</div>
-	{:else if totalModes === 0}
+	{:else if started && totalModes === 0}
 		<div class="py-6 text-center text-slate-500 text-sm">
-			No event books configured
+			{$_('books.noBooks')}
 		</div>
 	{:else if allComplete}
 		<!-- All Complete State -->
@@ -287,8 +293,8 @@
 					</svg>
 				</div>
 				<div>
-					<div class="text-lg font-semibold text-white">All Books Loaded</div>
-					<div class="text-sm text-emerald-400/80">{totalModes} event books ready</div>
+					<div class="text-lg font-semibold text-white">{$_('books.allLoaded')}</div>
+					<div class="text-sm text-emerald-400/80">{$_('books.booksReady', { values: { count: totalModes } })}</div>
 				</div>
 			</div>
 
@@ -311,7 +317,7 @@
 			<!-- Overall progress -->
 			<div class="p-3 rounded-xl bg-slate-700/30">
 				<div class="flex items-center justify-between mb-2">
-					<span class="text-xs text-slate-400">Overall Progress</span>
+					<span class="text-xs text-slate-400">{$_('books.overallProgress')}</span>
 					<span class="text-xs font-mono text-white">{overallProgress().toFixed(1)}%</span>
 				</div>
 				<div class="relative h-2 bg-slate-700 rounded-full overflow-hidden">
@@ -338,7 +344,7 @@
 						></div>
 					</div>
 					<div class="flex items-center justify-between mt-1.5 text-xs text-slate-500">
-						<span>{mode.current_line.toLocaleString()} lines</span>
+						<span>{mode.current_line.toLocaleString()} {$_('books.lines')}</span>
 						<span>{mode.percent_bytes.toFixed(1)}%</span>
 					</div>
 				</div>
@@ -382,7 +388,7 @@
 			<!-- Boost control -->
 			<div class="flex items-center justify-between pt-2 border-t border-slate-700/50">
 				<div class="flex items-center gap-2">
-					<span class="text-xs text-slate-500">Priority:</span>
+					<span class="text-xs text-slate-500">{$_('books.priority')}:</span>
 					<span class="text-xs font-mono font-medium {priority === 'high' ? 'text-orange-400' : 'text-slate-400'}">
 						{priority.toUpperCase()}
 					</span>
@@ -400,9 +406,9 @@
 							<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
 						</svg>
 					{:else if priority === 'high'}
-						Slow Down
+						{$_('books.slowDown')}
 					{:else}
-						TURBO
+						{$_('books.turbo')}
 					{/if}
 				</button>
 			</div>

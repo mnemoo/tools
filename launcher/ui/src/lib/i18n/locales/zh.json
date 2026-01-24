@@ -1,0 +1,69 @@
+{
+    "app": {
+        "title": "Mnemoo Tools",
+        "backend": "后端",
+        "frontend": "前端"
+    },
+    "buttons": {
+        "startAll": "全部启动",
+        "startAllServices": "启动所有服务",
+        "stopAll": "全部停止",
+        "stop": "停止",
+        "restart": "重启",
+        "openBrowser": "在浏览器中打开",
+        "reload": "重新加载",
+        "changeDir": "更改目录",
+        "killAll": "终止所有",
+        "save": "保存",
+        "cancel": "取消",
+        "browse": "浏览",
+        "clear": "清除",
+        "selectFolder": "选择文件夹"
+    },
+    "settings": {
+        "title": "设置",
+        "libraryPath": "库路径",
+        "frontendPort": "前端端口",
+        "language": "语言",
+        "autoLoadBooks": "自动加载书籍",
+        "autoLoadBooksLong": "启动时自动加载事件书籍",
+        "autoLoadBooksHint": "禁用时，书籍不会自动加载以避免高CPU使用率。您可以从前端手动开始加载。",
+        "autoReloadLUT": "自动重新加载LUT",
+        "dependencies": "依赖项"
+    },
+    "logs": {
+        "title": "日志",
+        "noLogs": "暂无日志。启动服务以查看输出。"
+    },
+    "welcome": {
+        "title": "欢迎使用 Mnemoo Tools",
+        "description": "启动服务以开始使用 Mnemoo Tools。",
+        "selectFolder": "首先，在设置中选择您的库文件夹。"
+    },
+    "status": {
+        "running": "运行中",
+        "stopped": "已停止",
+        "starting": "启动中...",
+        "error": "错误"
+    },
+    "errors": {
+        "portsInUse": "端口正在使用：",
+        "libraryNotSet": "库路径未设置。"
+    },
+    "languages": {
+        "en": "English",
+        "ru": "Русский",
+        "es": "Español",
+        "zh": "中文",
+        "fr": "Français",
+        "it": "Italiano",
+        "de": "Deutsch",
+        "ko": "한국어",
+        "pt": "Português",
+        "el": "Ελληνικά",
+        "tr": "Türkçe",
+        "vi": "Tiếng Việt",
+        "th": "ไทย",
+        "fi": "Suomi"
+    }
+}

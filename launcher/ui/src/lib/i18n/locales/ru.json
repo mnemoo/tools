@@ -1,0 +1,69 @@
+{
+    "app": {
+        "title": "Mnemoo Tools",
+        "backend": "Бэкенд",
+        "frontend": "Фронтенд"
+    },
+    "buttons": {
+        "startAll": "Запустить всё",
+        "startAllServices": "Запустить все сервисы",
+        "stopAll": "Остановить всё",
+        "stop": "Стоп",
+        "restart": "Перезапустить",
+        "openBrowser": "Открыть в браузере",
+        "reload": "Обновить",
+        "changeDir": "Сменить папку",
+        "killAll": "Убить все",
+        "save": "Сохранить",
+        "cancel": "Отмена",
+        "browse": "Обзор",
+        "clear": "Очистить",
+        "selectFolder": "Выбрать папку"
+    },
+    "settings": {
+        "title": "Настройки",
+        "libraryPath": "Путь к библиотеке",
+        "frontendPort": "Порт фронтенда",
+        "language": "Язык",
+        "autoLoadBooks": "Автозагрузка книг",
+        "autoLoadBooksLong": "Автозагрузка книг событий при запуске",
+        "autoLoadBooksHint": "При отключении книги не загружаются автоматически для экономии CPU. Вы можете запустить загрузку вручную из фронтенда.",
+        "autoReloadLUT": "Авто-обновление LUT",
+        "dependencies": "Зависимости"
+    },
+    "logs": {
+        "title": "Логи",
+        "noLogs": "Пока нет логов. Запустите сервисы."
+    },
+    "welcome": {
+        "title": "Добро пожаловать в Mnemoo Tools",
+        "description": "Запустите сервисы для начала работы.",
+        "selectFolder": "Сначала выберите папку библиотеки в настройках."
+    },
+    "status": {
+        "running": "Работает",
+        "stopped": "Остановлен",
+        "starting": "Запуск...",
+        "error": "Ошибка"
+    },
+    "errors": {
+        "portsInUse": "Порты заняты:",
+        "libraryNotSet": "Путь к библиотеке не задан."
+    },
+    "languages": {
+        "en": "English",
+        "ru": "Русский",
+        "es": "Español",
+        "zh": "中文",
+        "fr": "Français",
+        "it": "Italiano",
+        "de": "Deutsch",
+        "ko": "한국어",
+        "pt": "Português",
+        "el": "Ελληνικά",
+        "tr": "Türkçe",
+        "vi": "Tiếng Việt",
+        "th": "ไทย",
+        "fi": "Suomi"
+    }
+}

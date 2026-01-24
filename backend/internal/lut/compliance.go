@@ -24,15 +24,15 @@ const (
 
 // ComplianceCheck represents a single compliance check result.
 type ComplianceCheck struct {
-	ID          ComplianceCheckID `json:"id"`
-	Name        string            `json:"name"`
-	Description string            `json:"description"`
-	Passed      bool              `json:"passed"`
-	Value       string            `json:"value"`
-	Expected    string            `json:"expected"`
-	Reason      string            `json:"reason,omitempty"`
-	Severity    string            `json:"severity"` // "error", "warning", "info"
-	Details     interface{}       `json:"details,omitempty"`
+	ID             ComplianceCheckID `json:"id"`
+	NameKey        string            `json:"nameKey"`
+	DescriptionKey string            `json:"descriptionKey"`
+	Passed         bool              `json:"passed"`
+	Value          string            `json:"value"`
+	Expected       string            `json:"expected"`
+	ReasonKey      string            `json:"reasonKey,omitempty"`
+	Severity       string            `json:"severity"` // "error", "warning", "info"
+	Details        interface{}       `json:"details,omitempty"`
 }
 
 // ComplianceResult contains all compliance check results for a mode.
@@ -213,12 +213,12 @@ func (c *ComplianceChecker) checkModeRTPVariation(lut *stakergs.LookupTable, bas
 	isInRange := modeRTP >= minAllowed && modeRTP <= maxAllowed
 
 	check := ComplianceCheck{
-		ID:          CheckRTPVariation,
-		Name:        "RTP vs Base Mode",
-		Description: fmt.Sprintf("RTP must be within ±0.5%% of %s (%.2f%%)", baseModeName, baseRTP*100),
-		Expected:    fmt.Sprintf("%.2f%% - %.2f%%", minAllowed*100, maxAllowed*100),
-		Value:       fmt.Sprintf("%.2f%% (deviation: %.2f%%)", modeRTP*100, deviation*100),
-		Severity:    "error",
+		ID:             CheckRTPVariation,
+		NameKey:        "compliance.checks.rtpVariation.name",
+		DescriptionKey: "compliance.checks.rtpVariation.description",
+		Expected:       fmt.Sprintf("%.2f%% - %.2f%%", minAllowed*100, maxAllowed*100),
+		Value:          fmt.Sprintf("%.2f%% (deviation: %.2f%%)", modeRTP*100, deviation*100),
+		Severity:       "error",
 		Details: map[string]interface{}{
 			"base_mode":   baseModeName,
 			"base_rtp":    baseRTP,
@@ -234,9 +234,9 @@ func (c *ComplianceChecker) checkModeRTPVariation(lut *stakergs.LookupTable, bas
 	} else {
 		check.Passed = false
 		if modeRTP < minAllowed {
-			check.Reason = fmt.Sprintf("RTP %.2f%% is %.2f%% below minimum", modeRTP*100, (minAllowed-modeRTP)*100)
+			check.ReasonKey = "compliance.checks.rtpVariation.reasonLow"
 		} else {
-			check.Reason = fmt.Sprintf("RTP %.2f%% is %.2f%% above maximum", modeRTP*100, (modeRTP-maxAllowed)*100)
+			check.ReasonKey = "compliance.checks.rtpVariation.reasonHigh"
 		}
 	}
 
@@ -248,12 +248,12 @@ func (c *ComplianceChecker) checkRTPRange(stats *Statistics) ComplianceCheck {
 	maxRTP := 0.98
 
 	check := ComplianceCheck{
-		ID:          CheckRTPRange,
-		Name:        "RTP Range",
-		Description: "Return to Player must be between 90% and 98%",
-		Expected:    fmt.Sprintf("%.1f%% - %.1f%%", minRTP*100, maxRTP*100),
-		Value:       fmt.Sprintf("%.2f%%", stats.RTP*100),
-		Severity:    "error",
+		ID:             CheckRTPRange,
+		NameKey:        "compliance.checks.rtpRange.name",
+		DescriptionKey: "compliance.checks.rtpRange.description",
+		Expected:       fmt.Sprintf("%.1f%% - %.1f%%", minRTP*100, maxRTP*100),
+		Value:          fmt.Sprintf("%.2f%%", stats.RTP*100),
+		Severity:       "error",
 	}
 
 	if stats.RTP >= minRTP && stats.RTP <= maxRTP {
@@ -261,9 +261,9 @@ func (c *ComplianceChecker) checkRTPRange(stats *Statistics) ComplianceCheck {
 	} else {
 		check.Passed = false
 		if stats.RTP < minRTP {
-			check.Reason = fmt.Sprintf("RTP is too low (%.2f%%). Minimum allowed is %.1f%%", stats.RTP*100, minRTP*100)
+			check.ReasonKey = "compliance.checks.rtpRange.reasonLow"
 		} else {
-			check.Reason = fmt.Sprintf("RTP is too high (%.2f%%). Maximum allowed is %.1f%%", stats.RTP*100, maxRTP*100)
+			check.ReasonKey = "compliance.checks.rtpRange.reasonHigh"
 		}
 	}
 
@@ -300,22 +300,22 @@ func (c *ComplianceChecker) checkRTPVariationGlobal(tables map[string]*stakergs.
 	passedModes := totalModes - len(outOfRangeModes)
 
 	check := ComplianceCheck{
-		ID:          CheckRTPVariation,
-		Name:        "RTP Variation Between Modes",
-		Description: fmt.Sprintf("All modes must be within ±0.5%% of %s (%.2f%%)", baseModeName, baseRTP*100),
-		Expected:    fmt.Sprintf("%.2f%% - %.2f%%", minAllowed*100, maxAllowed*100),
-		Value:       fmt.Sprintf("%d/%d modes passed", passedModes, totalModes),
-		Severity:    "error",
+		ID:             CheckRTPVariation,
+		NameKey:        "compliance.checks.rtpVariationGlobal.name",
+		DescriptionKey: "compliance.checks.rtpVariationGlobal.description",
+		Expected:       fmt.Sprintf("%.2f%% - %.2f%%", minAllowed*100, maxAllowed*100),
+		Value:          fmt.Sprintf("%d/%d modes passed", passedModes, totalModes),
+		Severity:       "error",
 		Details: map[string]interface{}{
-			"base_mode":        baseModeName,
-			"base_rtp":         baseRTP,
-			"min_allowed":      minAllowed,
-			"max_allowed":      maxAllowed,
-			"mode_rtps":        modeRTPs,
-			"out_of_range":     outOfRangeModes,
-			"max_deviation":    maxDeviation,
-			"passed_count":     passedModes,
-			"failed_count":     len(outOfRangeModes),
+			"base_mode":     baseModeName,
+			"base_rtp":      baseRTP,
+			"min_allowed":   minAllowed,
+			"max_allowed":   maxAllowed,
+			"mode_rtps":     modeRTPs,
+			"out_of_range":  outOfRangeModes,
+			"max_deviation": maxDeviation,
+			"passed_count":  passedModes,
+			"failed_count":  len(outOfRangeModes),
 		},
 	}
 
@@ -323,7 +323,7 @@ func (c *ComplianceChecker) checkRTPVariationGlobal(tables map[string]*stakergs.
 		check.Passed = true
 	} else {
 		check.Passed = false
-		check.Reason = fmt.Sprintf("%d mode(s) outside range: %v", len(outOfRangeModes), outOfRangeModes)
+		check.ReasonKey = "compliance.checks.rtpVariationGlobal.reason"
 	}
 
 	return check
@@ -350,20 +350,13 @@ func (c *ComplianceChecker) checkMaxWinAchievable(lut *stakergs.LookupTable, tot
 
 	actualOdds := float64(totalWeight) / float64(maxPayoutWeight)
 
-	description := "Advertised max win must be realistically obtainable"
-	if cost > 1 {
-		description = fmt.Sprintf("Max win obtainable (adjusted for %.0fx cost: 20M/%.0f = %s)", cost, cost, formatLargeNumber(maxOdds))
-	} else {
-		description = "Max win must be obtainable (hit-rate better than 1 in 20M for base mode)"
-	}
-
 	check := ComplianceCheck{
-		ID:          CheckMaxWinAchievable,
-		Name:        "Maximum Win Achievability",
-		Description: description,
-		Expected:    fmt.Sprintf("Odds ≤ 1 in %s", formatLargeNumber(maxOdds)),
-		Value:       fmt.Sprintf("1 in %s", formatLargeNumber(actualOdds)),
-		Severity:    "error",
+		ID:             CheckMaxWinAchievable,
+		NameKey:        "compliance.checks.maxWinAchievable.name",
+		DescriptionKey: "compliance.checks.maxWinAchievable.description",
+		Expected:       fmt.Sprintf("Odds ≤ 1 in %s", formatLargeNumber(maxOdds)),
+		Value:          fmt.Sprintf("1 in %s", formatLargeNumber(actualOdds)),
+		Severity:       "error",
 		Details: map[string]interface{}{
 			"max_payout":        stats.MaxPayout,
 			"max_payout_weight": maxPayoutWeight,
@@ -379,8 +372,7 @@ func (c *ComplianceChecker) checkMaxWinAchievable(lut *stakergs.LookupTable, tot
 		check.Passed = true
 	} else {
 		check.Passed = false
-		check.Reason = fmt.Sprintf("Max win (%.2fx) is too rare. Odds 1 in %s exceed adjusted limit 1 in %s (base 20M / %.0fx cost)",
-			stats.MaxPayout, formatLargeNumber(actualOdds), formatLargeNumber(maxOdds), cost)
+		check.ReasonKey = "compliance.checks.maxWinAchievable.reason"
 	}
 
 	return check
@@ -397,13 +389,13 @@ func (c *ComplianceChecker) checkHitRateReasonable(lut *stakergs.LookupTable, st
 	// Skip check for bonus modes (cost > 2)
 	if cost > 2 {
 		return ComplianceCheck{
-			ID:          CheckHitRateReasonable,
-			Name:        "Hit Rate",
-			Description: fmt.Sprintf("Skipped for bonus mode (cost %.0fx > 2x)", cost),
-			Expected:    "N/A (bonus mode)",
-			Value:       fmt.Sprintf("%.2f%% (1 in %.2f)", stats.HitRate*100, 1.0/stats.HitRate),
-			Severity:    "info",
-			Passed:      true,
+			ID:             CheckHitRateReasonable,
+			NameKey:        "compliance.checks.hitRate.name",
+			DescriptionKey: "compliance.checks.hitRate.descriptionSkipped",
+			Expected:       "N/A (bonus mode)",
+			Value:          fmt.Sprintf("%.2f%% (1 in %.2f)", stats.HitRate*100, 1.0/stats.HitRate),
+			Severity:       "info",
+			Passed:         true,
 		}
 	}
 
@@ -414,12 +406,12 @@ func (c *ComplianceChecker) checkHitRateReasonable(lut *stakergs.LookupTable, st
 	odds := 1.0 / stats.HitRate
 
 	check := ComplianceCheck{
-		ID:          CheckHitRateReasonable,
-		Name:        "Hit Rate",
-		Description: "Non-zero win hit rate should be reasonable (typically 1 in 3 to 1 in 20)",
-		Expected:    fmt.Sprintf("%.0f%% - %.0f%% (1 in %.0f - 1 in %.0f)", minHitRate*100, maxHitRate*100, 1/maxHitRate, 1/minHitRate),
-		Value:       fmt.Sprintf("%.2f%% (1 in %.2f)", stats.HitRate*100, odds),
-		Severity:    "warning",
+		ID:             CheckHitRateReasonable,
+		NameKey:        "compliance.checks.hitRate.name",
+		DescriptionKey: "compliance.checks.hitRate.description",
+		Expected:       fmt.Sprintf("%.0f%% - %.0f%% (1 in %.0f - 1 in %.0f)", minHitRate*100, maxHitRate*100, 1/maxHitRate, 1/minHitRate),
+		Value:          fmt.Sprintf("%.2f%% (1 in %.2f)", stats.HitRate*100, odds),
+		Severity:       "warning",
 	}
 
 	if stats.HitRate >= minHitRate && stats.HitRate <= maxHitRate {
@@ -427,9 +419,9 @@ func (c *ComplianceChecker) checkHitRateReasonable(lut *stakergs.LookupTable, st
 	} else {
 		check.Passed = false
 		if stats.HitRate < minHitRate {
-			check.Reason = fmt.Sprintf("Hit rate is too low (1 in %.0f). Players may perceive too many losing spins", odds)
+			check.ReasonKey = "compliance.checks.hitRate.reasonLow"
 		} else {
-			check.Reason = fmt.Sprintf("Hit rate is unusually high (1 in %.1f). This may affect game balance", odds)
+			check.ReasonKey = "compliance.checks.hitRate.reasonHigh"
 		}
 	}
 
@@ -488,11 +480,11 @@ func (c *ComplianceChecker) checkPayoutGaps(lut *stakergs.LookupTable, stats *St
 	}
 
 	check := ComplianceCheck{
-		ID:          CheckPayoutGaps,
-		Name:        "Payout Distribution Gaps",
-		Description: "Hit-rate table should be broadly populated without significant gaps",
-		Expected:    "No significant gaps in payout ranges",
-		Severity:    "warning",
+		ID:             CheckPayoutGaps,
+		NameKey:        "compliance.checks.payoutGaps.name",
+		DescriptionKey: "compliance.checks.payoutGaps.description",
+		Expected:       "No significant gaps in payout ranges",
+		Severity:       "warning",
 	}
 
 	if len(gaps) == 0 {
@@ -501,7 +493,7 @@ func (c *ComplianceChecker) checkPayoutGaps(lut *stakergs.LookupTable, stats *St
 	} else {
 		check.Passed = false
 		check.Value = fmt.Sprintf("%d gap(s) found", len(gaps))
-		check.Reason = fmt.Sprintf("Missing payouts in ranges: %v", gaps)
+		check.ReasonKey = "compliance.checks.payoutGaps.reason"
 		check.Details = gaps
 	}
 
@@ -515,19 +507,19 @@ func (c *ComplianceChecker) checkUniquePayouts(lut *stakergs.LookupTable) Compli
 	uniquePayouts := c.countUniquePayouts(lut)
 
 	check := ComplianceCheck{
-		ID:          CheckUniquePayouts,
-		Name:        "Unique Payout Amounts",
-		Description: "Ensure there is a reasonable number of unique payout amounts for variety",
-		Expected:    fmt.Sprintf("≥ %d unique values", minUnique),
-		Value:       fmt.Sprintf("%d unique values", uniquePayouts),
-		Severity:    "warning",
+		ID:             CheckUniquePayouts,
+		NameKey:        "compliance.checks.uniquePayouts.name",
+		DescriptionKey: "compliance.checks.uniquePayouts.description",
+		Expected:       fmt.Sprintf("≥ %d unique values", minUnique),
+		Value:          fmt.Sprintf("%d unique values", uniquePayouts),
+		Severity:       "warning",
 	}
 
 	if uniquePayouts >= minUnique {
 		check.Passed = true
 	} else {
 		check.Passed = false
-		check.Reason = fmt.Sprintf("Only %d unique payout values. Games typically need at least %d for variety", uniquePayouts, minUnique)
+		check.ReasonKey = "compliance.checks.uniquePayouts.reason"
 	}
 
 	return check
@@ -538,22 +530,22 @@ func (c *ComplianceChecker) checkSimulationDiversity(lut *stakergs.LookupTable, 
 	// With 100,000 simulations, a single result shouldn't exceed ~1% probability
 	maxSingleProb := 0.01 // 1%
 
-	mostFreqProb, zeroProb := c.calculateMostFrequentProbability(lut, totalWeight)
+	mostFreqProb, _ := c.calculateMostFrequentProbability(lut, totalWeight)
 
 	check := ComplianceCheck{
-		ID:          CheckSimulationDiversity,
-		Name:        "Simulation Diversity",
-		Description: "No single outcome should be so frequent it could appear multiple times in a session",
-		Expected:    fmt.Sprintf("Most frequent outcome < %.1f%%", maxSingleProb*100),
-		Value:       fmt.Sprintf("%.2f%%", mostFreqProb*100),
-		Severity:    "warning",
+		ID:             CheckSimulationDiversity,
+		NameKey:        "compliance.checks.simulationDiversity.name",
+		DescriptionKey: "compliance.checks.simulationDiversity.description",
+		Expected:       fmt.Sprintf("Most frequent outcome < %.1f%%", maxSingleProb*100),
+		Value:          fmt.Sprintf("%.2f%%", mostFreqProb*100),
+		Severity:       "warning",
 	}
 
 	if mostFreqProb <= maxSingleProb {
 		check.Passed = true
 	} else {
 		check.Passed = false
-		check.Reason = fmt.Sprintf("Most frequent outcome has %.2f%% probability, which may cause repetitive results (info: loss %.2f%%)", mostFreqProb*100, zeroProb*100)
+		check.ReasonKey = "compliance.checks.simulationDiversity.reason"
 	}
 
 	return check
@@ -564,20 +556,19 @@ func (c *ComplianceChecker) checkZeroPayoutRate(stats *Statistics) ComplianceChe
 	maxZeroRate := 0.90
 
 	check := ComplianceCheck{
-		ID:          CheckZeroPayoutRate,
-		Name:        "Zero Payout Rate",
-		Description: "A reasonable portion of simulations should yield paying results",
-		Expected:    fmt.Sprintf("Non-paying ≤ %.0f%%", maxZeroRate*100),
-		Value:       fmt.Sprintf("%.2f%% non-paying", stats.ZeroPayoutRate*100),
-		Severity:    "error",
+		ID:             CheckZeroPayoutRate,
+		NameKey:        "compliance.checks.zeroPayoutRate.name",
+		DescriptionKey: "compliance.checks.zeroPayoutRate.description",
+		Expected:       fmt.Sprintf("Non-paying ≤ %.0f%%", maxZeroRate*100),
+		Value:          fmt.Sprintf("%.2f%% non-paying", stats.ZeroPayoutRate*100),
+		Severity:       "error",
 	}
 
 	if stats.ZeroPayoutRate <= maxZeroRate {
 		check.Passed = true
 	} else {
 		check.Passed = false
-		check.Reason = fmt.Sprintf("%.1f%% of outcomes result in zero payout, exceeding %.0f%% threshold",
-			stats.ZeroPayoutRate*100, maxZeroRate*100)
+		check.ReasonKey = "compliance.checks.zeroPayoutRate.reason"
 	}
 
 	return check
@@ -589,19 +580,19 @@ func (c *ComplianceChecker) checkVolatility(stats *Statistics) ComplianceCheck {
 	maxVolatility := 50.0 // Very high volatility threshold
 
 	check := ComplianceCheck{
-		ID:          CheckVolatility,
-		Name:        "Volatility",
-		Description: "Standard deviation should be within industry norms for reasonable gameplay",
-		Expected:    fmt.Sprintf("Volatility < %.0f", maxVolatility),
-		Value:       fmt.Sprintf("%.2f", stats.Volatility),
-		Severity:    "info",
+		ID:             CheckVolatility,
+		NameKey:        "compliance.checks.volatility.name",
+		DescriptionKey: "compliance.checks.volatility.description",
+		Expected:       fmt.Sprintf("Volatility < %.0f", maxVolatility),
+		Value:          fmt.Sprintf("%.2f", stats.Volatility),
+		Severity:       "info",
 	}
 
 	if stats.Volatility < maxVolatility {
 		check.Passed = true
 	} else {
 		check.Passed = false
-		check.Reason = fmt.Sprintf("Very high volatility (%.2f) may result in extreme variance in player outcomes", stats.Volatility)
+		check.ReasonKey = "compliance.checks.volatility.reason"
 	}
 
 	return check

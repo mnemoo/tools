@@ -91,8 +91,12 @@ func (s *Server) Start() error {
 	mux.HandleFunc("GET /api/mode/{mode}/outcomes", s.handleModeOutcomes)
 	mux.HandleFunc("GET /api/compare", s.handleCompare)
 
-	// Events API
+	// Events API (lazy loading - only loads what's needed)
 	mux.HandleFunc("POST /api/mode/{mode}/events/load", s.handleLoadEvents)
+	mux.HandleFunc("DELETE /api/mode/{mode}/events", s.handleUnloadEvents)
+	mux.HandleFunc("DELETE /api/events", s.handleUnloadAllEvents)
+	mux.HandleFunc("GET /api/mode/{mode}/events/range", s.handleGetEventsRange)
+	mux.HandleFunc("GET /api/mode/{mode}/events/stats", s.handleEventsStats)
 	mux.HandleFunc("GET /api/mode/{mode}/event/{simID}", s.handleGetEvent)
 
 	// Simulator API
@@ -197,8 +201,12 @@ func (s *Server) GetHandler() http.Handler {
 	mux.HandleFunc("GET /api/mode/{mode}/outcomes", s.handleModeOutcomes)
 	mux.HandleFunc("GET /api/compare", s.handleCompare)
 
-	// Events API
+	// Events API (lazy loading - only loads what's needed)
 	mux.HandleFunc("POST /api/mode/{mode}/events/load", s.handleLoadEvents)
+	mux.HandleFunc("DELETE /api/mode/{mode}/events", s.handleUnloadEvents)
+	mux.HandleFunc("DELETE /api/events", s.handleUnloadAllEvents)
+	mux.HandleFunc("GET /api/mode/{mode}/events/range", s.handleGetEventsRange)
+	mux.HandleFunc("GET /api/mode/{mode}/events/stats", s.handleEventsStats)
 	mux.HandleFunc("GET /api/mode/{mode}/event/{simID}", s.handleGetEvent)
 
 	// Simulator API
@@ -576,7 +584,127 @@ func (s *Server) handleLoadEvents(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// handleUnloadEvents unloads events for a mode to free memory.
+func (s *Server) handleUnloadEvents(w http.ResponseWriter, r *http.Request) {
+	mode := r.PathValue("mode")
+	if mode == "" {
+		common.WriteError(w, http.StatusBadRequest, "mode parameter required")
+		return
+	}
+
+	wasLoaded := s.loader.EventsLoader().IsLoaded(mode)
+	s.loader.EventsLoader().UnloadMode(mode)
+
+	common.WriteSuccess(w, map[string]any{
+		"mode":       mode,
+		"unloaded":   true,
+		"was_loaded": wasLoaded,
+	})
+}
+
+// handleUnloadAllEvents unloads all cached events to free memory.
+func (s *Server) handleUnloadAllEvents(w http.ResponseWriter, r *http.Request) {
+	s.loader.EventsLoader().UnloadAll()
+	common.WriteSuccess(w, map[string]any{
+		"unloaded": true,
+		"message":  "All events unloaded from memory",
+	})
+}
+
+// handleEventsStats returns statistics about events cache for a mode.
+func (s *Server) handleEventsStats(w http.ResponseWriter, r *http.Request) {
+	mode := r.PathValue("mode")
+	if mode == "" {
+		common.WriteError(w, http.StatusBadRequest, "mode parameter required")
+		return
+	}
+
+	eventsLoader := s.loader.EventsLoader()
+	stats := map[string]any{
+		"mode":        mode,
+		"fully_loaded": eventsLoader.IsLoaded(mode),
+		"event_count":  eventsLoader.GetEventCount(mode),
+	}
+
+	// Add chunk cache stats if available
+	chunkStats := eventsLoader.GetChunkCacheStats(mode)
+	if chunkStats != nil {
+		stats["chunk_cache"] = chunkStats
+	}
+
+	common.WriteSuccess(w, stats)
+}
+
+// handleGetEventsRange returns events for a specific line range.
+// Query params: start (required), end (required)
+// Example: /api/mode/base/events/range?start=100&end=200
+func (s *Server) handleGetEventsRange(w http.ResponseWriter, r *http.Request) {
+	mode := r.PathValue("mode")
+	if mode == "" {
+		common.WriteError(w, http.StatusBadRequest, "mode parameter required")
+		return
+	}
+
+	startStr := r.URL.Query().Get("start")
+	endStr := r.URL.Query().Get("end")
+
+	if startStr == "" || endStr == "" {
+		common.WriteError(w, http.StatusBadRequest, "start and end query parameters required")
+		return
+	}
+
+	var start, end int
+	if _, err := fmt.Sscanf(startStr, "%d", &start); err != nil {
+		common.WriteError(w, http.StatusBadRequest, "invalid start parameter")
+		return
+	}
+	if _, err := fmt.Sscanf(endStr, "%d", &end); err != nil {
+		common.WriteError(w, http.StatusBadRequest, "invalid end parameter")
+		return
+	}
+
+	if start < 0 || end <= start {
+		common.WriteError(w, http.StatusBadRequest, "invalid range: start must be >= 0 and end must be > start")
+		return
+	}
+
+	// Limit range size to prevent memory issues
+	maxRange := 10000
+	if end-start > maxRange {
+		common.WriteError(w, http.StatusBadRequest, fmt.Sprintf("range too large: max %d events", maxRange))
+		return
+	}
+
+	// Get mode config for events file
+	config, err := s.loader.GetModeConfig(mode)
+	if err != nil {
+		common.WriteError(w, http.StatusNotFound, err.Error())
+		return
+	}
+
+	if config.Events == "" {
+		common.WriteError(w, http.StatusBadRequest, "mode has no events file")
+		return
+	}
+
+	// Load events range
+	events, err := s.loader.EventsLoader().GetEventsRange(config.Events, start, end)
+	if err != nil {
+		common.WriteError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	common.WriteSuccess(w, map[string]any{
+		"mode":   mode,
+		"start":  start,
+		"end":    end,
+		"count":  len(events),
+		"events": events,
+	})
+}
+
 // handleGetEvent returns a specific event with its statistics.
+// Uses lazy loading - only loads the requested event chunk, not the full file.
 func (s *Server) handleGetEvent(w http.ResponseWriter, r *http.Request) {
 	mode := r.PathValue("mode")
 	simIDStr := r.PathValue("simID")
@@ -606,10 +734,11 @@ func (s *Server) handleGetEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if events are loaded
-	if !s.loader.EventsLoader().IsLoaded(mode) {
-		// Return outcome stats without event data
-		common.WriteSuccess(w, map[string]interface{}{
+	// Get mode config to find events file
+	config, err := s.loader.GetModeConfig(mode)
+	if err != nil || config.Events == "" {
+		// No events file configured, return outcome stats only
+		common.WriteSuccess(w, map[string]any{
 			"sim_id":        outcome.SimID,
 			"weight":        outcome.Weight,
 			"payout":        outcome.Payout,
@@ -617,36 +746,50 @@ func (s *Server) handleGetEvent(w http.ResponseWriter, r *http.Request) {
 			"odds":          outcome.Odds,
 			"event":         nil,
 			"events_loaded": false,
+			"no_events_file": true,
 		})
 		return
 	}
 
-	// Get event data (may not exist even if events file is loaded)
-	// Use SimIDOffset for backwards compatibility with old (1-indexed) and new (0-indexed) formats
-	eventInfo, err := s.loader.EventsLoader().GetEventInfo(mode, simID, table.SimIDOffset, outcome)
-	if err != nil {
-		// Event not found in events file, return outcome stats without event
-		common.WriteSuccess(w, map[string]interface{}{
-			"sim_id":        outcome.SimID,
-			"weight":        outcome.Weight,
-			"payout":        outcome.Payout,
-			"probability":   outcome.Probability,
-			"odds":          outcome.Odds,
-			"event":         nil,
-			"events_loaded": true,
-			"event_missing": true,
-		})
-		return
+	// Try to get event - first check full cache, then use lazy loading
+	eventsLoader := s.loader.EventsLoader()
+	var event json.RawMessage
+
+	if eventsLoader.IsLoaded(mode) {
+		// Events fully loaded, use existing method
+		eventInfo, err := eventsLoader.GetEventInfo(mode, simID, table.SimIDOffset, outcome)
+		if err == nil {
+			event = eventInfo.Event
+		}
+	} else {
+		// Use lazy loading - only loads a small chunk around the requested event
+		event, err = eventsLoader.GetEventLazy(mode, config.Events, simID, table.SimIDOffset)
+		if err != nil {
+			// Lazy loading failed, return outcome stats without event
+			common.WriteSuccess(w, map[string]any{
+				"sim_id":        outcome.SimID,
+				"weight":        outcome.Weight,
+				"payout":        outcome.Payout,
+				"probability":   outcome.Probability,
+				"odds":          outcome.Odds,
+				"event":         nil,
+				"events_loaded": false,
+				"lazy_load":     true,
+				"error":         err.Error(),
+			})
+			return
+		}
 	}
 
-	common.WriteSuccess(w, map[string]interface{}{
-		"sim_id":        eventInfo.SimID,
-		"weight":        eventInfo.Weight,
-		"payout":        eventInfo.Payout,
-		"probability":   eventInfo.Probability,
-		"odds":          eventInfo.Odds,
-		"event":         eventInfo.Event,
-		"events_loaded": true,
+	common.WriteSuccess(w, map[string]any{
+		"sim_id":        outcome.SimID,
+		"weight":        outcome.Weight,
+		"payout":        outcome.Payout,
+		"probability":   outcome.Probability,
+		"odds":          outcome.Odds,
+		"event":         event,
+		"events_loaded": eventsLoader.IsLoaded(mode),
+		"lazy_load":     !eventsLoader.IsLoaded(mode),
 	})
 }
 
@@ -778,11 +921,34 @@ func (s *Server) handleLoaderStatus(w http.ResponseWriter, r *http.Request) {
 	priority := s.bgLoader.GetPriority().String()
 	started := s.bgLoader.IsStarted()
 
-	common.WriteSuccess(w, map[string]interface{}{
+	// Calculate memory estimation for preloading
+	var totalCompressedBytes int64
+	var modeCount int
+	for _, modeStatus := range status {
+		if modeStatus.TotalBytes > 0 {
+			totalCompressedBytes += modeStatus.TotalBytes
+			modeCount++
+		}
+	}
+
+	// Estimate decompressed size (zstd ratio ~10-15x for JSON, use 12x average)
+	// Plus overhead for map storage (~20% extra)
+	const decompressionRatio = 12.0
+	const storageOverhead = 1.2
+	estimatedMemoryBytes := int64(float64(totalCompressedBytes) * decompressionRatio * storageOverhead)
+
+	common.WriteSuccess(w, map[string]any{
 		"priority":   priority,
 		"started":    started,
 		"modes":      status,
 		"ws_clients": s.wsHub.ClientCount(),
+		"memory_estimate": map[string]any{
+			"compressed_bytes":   totalCompressedBytes,
+			"estimated_bytes":    estimatedMemoryBytes,
+			"estimated_mb":       estimatedMemoryBytes / (1024 * 1024),
+			"mode_count":         modeCount,
+			"decompression_ratio": decompressionRatio,
+		},
 	})
 }
 

@@ -1,0 +1,69 @@
+{
+    "app": {
+        "title": "Mnemoo Tools",
+        "backend": "Backend",
+        "frontend": "Frontend"
+    },
+    "buttons": {
+        "startAll": "Avvia tutto",
+        "startAllServices": "Avvia tutti i servizi",
+        "stopAll": "Ferma tutto",
+        "stop": "Ferma",
+        "restart": "Riavvia",
+        "openBrowser": "Apri nel browser",
+        "reload": "Ricarica",
+        "changeDir": "Cambia directory",
+        "killAll": "Termina tutto",
+        "save": "Salva",
+        "cancel": "Annulla",
+        "browse": "Sfoglia",
+        "clear": "Cancella",
+        "selectFolder": "Seleziona cartella"
+    },
+    "settings": {
+        "title": "Impostazioni",
+        "libraryPath": "Percorso libreria",
+        "frontendPort": "Porta frontend",
+        "language": "Lingua",
+        "autoLoadBooks": "Caricamento auto libri",
+        "autoLoadBooksLong": "Carica i libri eventi all'avvio",
+        "autoLoadBooksHint": "Quando disabilitato, i libri non verranno caricati automaticamente per evitare un uso elevato della CPU. Puoi avviare il caricamento manualmente dal frontend.",
+        "autoReloadLUT": "Ricarica auto LUT",
+        "dependencies": "Dipendenze"
+    },
+    "logs": {
+        "title": "Log",
+        "noLogs": "Nessun log ancora. Avvia i servizi per vedere l'output."
+    },
+    "welcome": {
+        "title": "Benvenuto in Mnemoo Tools",
+        "description": "Avvia i servizi per iniziare a usare Mnemoo Tools.",
+        "selectFolder": "Prima, seleziona la tua cartella libreria nelle impostazioni."
+    },
+    "status": {
+        "running": "In esecuzione",
+        "stopped": "Fermato",
+        "starting": "Avvio...",
+        "error": "Errore"
+    },
+    "errors": {
+        "portsInUse": "Porte in uso:",
+        "libraryNotSet": "Percorso libreria non impostato."
+    },
+    "languages": {
+        "en": "English",
+        "ru": "Русский",
+        "es": "Español",
+        "zh": "中文",
+        "fr": "Français",
+        "it": "Italiano",
+        "de": "Deutsch",
+        "ko": "한국어",
+        "pt": "Português",
+        "el": "Ελληνικά",
+        "tr": "Türkçe",
+        "vi": "Tiếng Việt",
+        "th": "ไทย",
+        "fi": "Suomi"
+    }
+}

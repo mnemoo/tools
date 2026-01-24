@@ -347,13 +347,18 @@ func (h *Handlers) Play(w http.ResponseWriter, r *http.Request) {
 	// Add payout to balance
 	session.Balance += payout
 
-	// Get event data (state) if available - extract only "events" array from book
+	// Get event data (state) using lazy loading - only loads what's needed
 	var stateData json.RawMessage
 	eventsLoader := h.loader.EventsLoader()
-	if bookJSON, err := eventsLoader.GetEvent(req.Mode, outcome.SimID, table.SimIDOffset); err == nil {
-		stateData = extractEvents(bookJSON)
+	modeConfig, _ := h.loader.GetModeConfig(req.Mode)
+	if modeConfig != nil && modeConfig.Events != "" {
+		// Use lazy loading - only loads a small chunk around the requested event
+		if bookJSON, err := eventsLoader.GetEventLazy(req.Mode, modeConfig.Events, outcome.SimID, table.SimIDOffset); err == nil {
+			stateData = extractEvents(bookJSON)
+		} else {
+			stateData = json.RawMessage(`[]`)
+		}
 	} else {
-		// Create minimal state if no event data
 		stateData = json.RawMessage(`[]`)
 	}
 
@@ -1026,19 +1031,16 @@ func (h *Handlers) Replay(w http.ResponseWriter, r *http.Request) {
 		costMultiplier = 1.0
 	}
 
-	// Check if events are loaded for mode
+	// Get event data using lazy loading - only loads the needed chunk
 	eventsLoader := h.loader.EventsLoader()
-	if !eventsLoader.IsLoaded(mode) {
-		// Try to load events
-		if err := h.loader.LoadEvents(mode); err != nil {
-			h.sendError(w, fmt.Sprintf("events not available for mode: %s", mode), http.StatusNotFound)
-			return
-		}
+	modeConfig, err := h.loader.GetModeConfig(mode)
+	if err != nil || modeConfig.Events == "" {
+		h.sendError(w, fmt.Sprintf("no events file configured for mode: %s", mode), http.StatusNotFound)
+		return
 	}
 
-	// Get event data (state) - extract only "events" array from book
-	// Use SimIDOffset for backwards compatibility with old (1-indexed) and new (0-indexed) formats
-	bookJSON, err := eventsLoader.GetEvent(mode, simID, table.SimIDOffset)
+	// Use lazy loading - only loads a small chunk around the requested event
+	bookJSON, err := eventsLoader.GetEventLazy(mode, modeConfig.Events, simID, table.SimIDOffset)
 	if err != nil {
 		h.sendError(w, fmt.Sprintf("event not found: %v", err), http.StatusNotFound)
 		return
