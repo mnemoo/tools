@@ -336,7 +336,7 @@
 		"weightOptimizer": "权重优化器",
 		"bucketMode": "桶模式",
 		"bucketModeDesc": "设置每个支付范围的频率（每N次旋转1次）或RTP的百分比。",
-		"bucketModeExample": "示例："10-20x赢 = 每25次旋转1次"或"最大赢 = RTP的0.5%"。",
+		"bucketModeExample": "示例：\"10-20x赢 = 每25次旋转1次\"或\"最大赢 = RTP的0.5%\"。",
 		"modeAnalysis": "模式分析：",
 		"minRtp": "最小RTP：",
 		"maxRtp": "最大RTP：",
