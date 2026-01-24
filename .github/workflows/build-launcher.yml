@@ -224,13 +224,17 @@ jobs:
       - name: Copy app icon (Unix)
         if: runner.os != 'Windows'
         working-directory: launcher
-        run: cp appicon.png build/appicon.png
+        run: |
+          mkdir -p build
+          cp appicon.png build/appicon.png
 
       - name: Copy app icon (Windows)
         if: runner.os == 'Windows'
         working-directory: launcher
         shell: pwsh
-        run: Copy-Item "appicon.png" "build\appicon.png"
+        run: |
+          New-Item -ItemType Directory -Force -Path build
+          Copy-Item "appicon.png" "build\appicon.png"
 
       # Build launcher with production tag
       - name: Build launcher (Unix)
