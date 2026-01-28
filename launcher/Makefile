@@ -8,17 +8,17 @@ setup:
 # Development mode with hot reload
 dev:
 	@cp appicon.png build/appicon.png
-	~/go/bin/wails dev
+	~/go/bin/wails dev -tags webkit2_41
 
 # Build production binary (requires bundled assets)
 build:
 	@cp appicon.png build/appicon.png
-	~/go/bin/wails build -tags prod
+	~/go/bin/wails build -tags "prod,webkit2_41"
 
 # Build optimized production binary
 build-release:
 	@cp appicon.png build/appicon.png
-	~/go/bin/wails build -ldflags="-s -w" -tags prod
+	~/go/bin/wails build -ldflags="-s -w" -tags "prod,webkit2_41"
 
 # Generate TypeScript bindings
 generate:

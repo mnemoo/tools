@@ -77,7 +77,7 @@ jobs:
           - os: macos-14
             goos: darwin
             goarch: arm64
-          - os: ubuntu-22.04
+          - os: ubuntu-24.04
             goos: linux
             goarch: amd64
           - os: windows-latest
@@ -124,7 +124,7 @@ jobs:
             goarch: arm64
             platform: darwin/arm64
             artifact: mtools-launcher-darwin-arm64.app.zip
-          - os: ubuntu-22.04
+          - os: ubuntu-24.04
             goos: linux
             goarch: amd64
             platform: linux/amd64
@@ -165,7 +165,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            libwebkit2gtk-4.0-dev \
+            libwebkit2gtk-4.1-dev \
             libgtk-3-dev \
             libayatana-appindicator3-dev \
             build-essential \
@@ -241,7 +241,7 @@ jobs:
         if: runner.os != 'Windows'
         working-directory: launcher
         run: |
-          ~/go/bin/wails build -platform ${{ matrix.platform }} -ldflags="-s -w" -tags prod
+          ~/go/bin/wails build -platform ${{ matrix.platform }} -ldflags="-s -w" -tags "prod,webkit2_41"
 
       - name: Build launcher (Windows)
         if: runner.os == 'Windows'
